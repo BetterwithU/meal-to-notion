@@ -12,7 +12,7 @@ function onOpen() {
     .addItem('2. 급식 메뉴 업데이트', 'manualUpdateMeals')
     .addItem('3. 시간표 이미지 삽입', 'manualUpdateTimetable')
     .addSeparator()
-    .addItem('전체 실행 (1→2→3)', 'manualFullUpdate')
+    .addItem('날짜+급식 실행 (1→2)', 'manualFullUpdate')
     .addToUi();
 }
 
@@ -114,9 +114,8 @@ function manualFullUpdate() {
   if (pages > 0) pagesMap = getNotionPagesMap(yearMonth, config);
 
   const meals = updateMealData(yearMonth, config, pagesMap);
-  const images = updateTimetableImages(yearMonth, config);
 
-  ui.alert(`${yearMonth} 전체 완료\n- 페이지 생성: ${pages}건\n- 급식 업데이트: ${meals}건\n- 시간표 이미지: ${images}건`);
+  ui.alert(`${yearMonth} 완료\n- 페이지 생성: ${pages}건\n- 급식 업데이트: ${meals}건\n\n시간표 이미지는 노션에서 속성 입력 후 [3. 시간표 이미지 삽입]을 별도 실행하세요.`);
 }
 
 function promptYearMonth() {
@@ -172,6 +171,7 @@ function createMonthPages(yearMonth, config, existingMap) {
     }
   }
 
+  SpreadsheetApp.flush(); // 시트 데이터 즉시 반영
   Logger.log(`[1단계] ${yearMonth} 페이지 ${created}개 생성 (기존 ${Object.keys(existingMap).length - created}개)`);
   return created;
 }
