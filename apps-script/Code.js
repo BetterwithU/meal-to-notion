@@ -44,7 +44,8 @@ const TIMETABLE_IMAGES = {
   '4': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/4.png',
   '5': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/5.png',
   '6': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/6.png',
-  '7': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/7.png'
+  '7': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/7.png',
+  '8': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/8.png'
 };
 
 // ===== 트리거 전용: 매일 실행, 20일~말일만 동작 =====
