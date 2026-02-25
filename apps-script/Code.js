@@ -249,11 +249,20 @@ function updateTimetableImages(yearMonth, config) {
     const imageUrl = TIMETABLE_IMAGES[page.timetableValue];
     if (!imageUrl) continue;
 
-    // 이미 이미지 블록이 있는지 확인
+    // 기존 이미지 블록 확인
     const existingBlocks = getPageBlocks(page.id, config);
-    const hasImage = existingBlocks.some(b => b.type === 'image');
-    if (hasImage) continue;
+    const existingImage = existingBlocks.find(b => b.type === 'image');
 
+    // 이미 같은 이미지면 스킵
+    if (existingImage && existingImage.image?.external?.url === imageUrl) continue;
+
+    // 기존 이미지 삭제
+    if (existingImage) {
+      deleteBlock(existingImage.id, config);
+      Utilities.sleep(API_DELAY);
+    }
+
+    // 새 이미지 삽입
     const success = appendImageBlock(page.id, imageUrl, config);
     if (success) inserted++;
     Utilities.sleep(API_DELAY);
@@ -413,6 +422,23 @@ function patchNotionPage(pageId, properties, config) {
       "Notion-Version": "2022-06-28"
     },
     payload: JSON.stringify({ properties: properties }),
+    muteHttpExceptions: true
+  };
+  try {
+    const res = UrlFetchApp.fetch(url, options);
+    return res.getResponseCode() === 200;
+  } catch (e) { return false; }
+}
+
+// ===== 헬퍼: 블록 삭제 =====
+function deleteBlock(blockId, config) {
+  const url = `https://api.notion.com/v1/blocks/${blockId}`;
+  const options = {
+    method: "delete",
+    headers: {
+      "Authorization": `Bearer ${config.NOTION_TOKEN}`,
+      "Notion-Version": "2022-06-28"
+    },
     muteHttpExceptions: true
   };
   try {
