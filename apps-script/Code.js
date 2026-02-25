@@ -12,7 +12,7 @@ function onOpen() {
     .addItem('2. 급식 메뉴 업데이트', 'manualUpdateMeals')
     .addItem('3. 시간표 이미지 삽입', 'manualUpdateTimetable')
     .addSeparator()
-    .addItem('날짜+급식 실행 (1→2)', 'manualFullUpdate')
+    .addItem('전체 실행 (1→2→3)', 'manualFullUpdate')
     .addToUi();
 }
 
@@ -114,8 +114,9 @@ function manualFullUpdate() {
   if (pages > 0) pagesMap = getNotionPagesMap(yearMonth, config);
 
   const meals = updateMealData(yearMonth, config, pagesMap);
+  const images = updateTimetableImages(yearMonth, config);
 
-  ui.alert(`${yearMonth} 완료\n- 페이지 생성: ${pages}건\n- 급식 업데이트: ${meals}건\n\n시간표 이미지는 노션에서 속성 입력 후 [3. 시간표 이미지 삽입]을 별도 실행하세요.`);
+  ui.alert(`${yearMonth} 전체 완료\n- 페이지 생성: ${pages}건\n- 급식 업데이트: ${meals}건\n- 시간표 이미지: ${images}건`);
 }
 
 function promptYearMonth() {
@@ -157,8 +158,12 @@ function createMonthPages(yearMonth, config, existingMap) {
 
   for (const dateStr of weekdays) {
     let pageId = existingMap[dateStr];
+    // 요일에 따라 시간표 기본값: 화목(2,4)="1", 월수금(1,3,5)="2"
+    const dayOfWeek = new Date(dateStr).getDay();
+    const timetableDefault = (dayOfWeek === 2 || dayOfWeek === 4) ? '1' : '2';
+
     if (!pageId) {
-      pageId = createNotionPage(dateStr, yearMonth, config);
+      pageId = createNotionPage(dateStr, yearMonth, timetableDefault, config);
       if (pageId) {
         created++;
         existingMap[dateStr] = pageId;
@@ -167,7 +172,7 @@ function createMonthPages(yearMonth, config, existingMap) {
     }
 
     if (!sheetDates.has(dateStr) && pageId) {
-      sheet.appendRow([dateStr, '', yearMonth, pageId, '']);
+      sheet.appendRow([dateStr, '', yearMonth, pageId, timetableDefault]);
     }
   }
 
@@ -364,15 +369,20 @@ function getNotionPagesMapFull(yearMonth, timetableProp, config) {
 }
 
 // ===== 헬퍼: Notion 페이지 생성 (빈 페이지) =====
-function createNotionPage(dateStr, yearMonth, config) {
+function createNotionPage(dateStr, yearMonth, timetableValue, config) {
   const url = 'https://api.notion.com/v1/pages';
+  const timetableProp = config.TIMETABLE_PROP_NAME || '시간표';
+  const properties = {
+    "이름": { title: [{ text: { content: dateStr } }] },
+    "날짜": { date: { start: dateStr } },
+    "Month": { select: { name: String(yearMonth) } }
+  };
+  if (timetableValue) {
+    properties[timetableProp] = { select: { name: String(timetableValue) } };
+  }
   const payload = {
     parent: { database_id: config.NOTION_DB_ID },
-    properties: {
-      "이름": { title: [{ text: { content: dateStr } }] },
-      "날짜": { date: { start: dateStr } },
-      "Month": { select: { name: String(yearMonth) } }
-    }
+    properties: properties
   };
   const options = {
     method: "post",
