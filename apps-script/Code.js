@@ -161,7 +161,7 @@ function createMonthPages(yearMonth, config, existingMap) {
     let pageId = existingMap[dateStr];
     // 요일에 따라 시간표 기본값: 화목(2,4)="1", 월수금(1,3,5)="2"
     const dayOfWeek = new Date(dateStr).getDay();
-    const timetableDefault = (dayOfWeek === 2 || dayOfWeek === 4) ? '1_45m_6p' : '2_45m_7p';
+    const timetableDefault = (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 5) ? '1_45m_6p' : '2_45m_7p';
 
     if (!pageId) {
       pageId = createNotionPage(dateStr, yearMonth, timetableDefault, config);
@@ -556,7 +556,7 @@ function writeManualSheet() {
   // --- 메뉴 구성 ---
   r = writeSection(sheet, r, '메뉴 구성', secBg);
   r = writeTableHeader(sheet, r, ['메뉴', '기능'], hdrBg, hdrFont);
-  r = writeTableRow(sheet, r, ['1. 날짜 페이지 생성', '해당 월 평일(월~금) 페이지를 노션 DB에 생성\n화목→SEED "1_45m_6p", 월수금→SEED "2_45m_7p" 자동 입력']);
+  r = writeTableRow(sheet, r, ['1. 날짜 페이지 생성', '해당 월 평일(월~금) 페이지를 노션 DB에 생성\n월수금→SEED "1_45m_6p", 화목→SEED "2_45m_7p" 자동 입력']);
   r = writeTableRow(sheet, r, ['2. 급식 메뉴 업데이트', 'NEIS API에서 급식 데이터를 가져와 기존 노션 페이지에 메뉴 업데이트']);
   r = writeTableRow(sheet, r, ['3. 시간표 이미지 삽입', '각 페이지의 SEED 속성값을 읽어 해당 이미지를 페이지에 삽입/교체']);
   r = writeTableRow(sheet, r, ['전체 실행 (1→2→3)', '위 3단계를 순서대로 한 번에 실행']);
@@ -576,8 +576,8 @@ function writeManualSheet() {
   // --- 시간표 이미지 매핑 ---
   r = writeSection(sheet, r, '시간표 이미지 매핑 (SEED 속성)', secBg);
   r = writeTableHeader(sheet, r, ['SEED 값', '기본 요일', '수업 형태'], hdrBg, hdrFont);
-  r = writeTableRow(sheet, r, ['1_45m_6p', '화, 목', '45분 × 6교시']);
-  r = writeTableRow(sheet, r, ['2_45m_7p', '월, 수, 금', '45분 × 7교시']);
+  r = writeTableRow(sheet, r, ['1_45m_6p', '월, 수, 금', '45분 × 6교시']);
+  r = writeTableRow(sheet, r, ['2_45m_7p', '화, 목', '45분 × 7교시']);
   r = writeTableRow(sheet, r, ['3_45m_4p_club', '수동 지정', '45분 × 4교시 + 동아리']);
   r = writeTableRow(sheet, r, ['4_40m_6p', '수동 지정', '40분 × 6교시']);
   r = writeTableRow(sheet, r, ['5_40m_7p', '수동 지정', '40분 × 7교시']);
