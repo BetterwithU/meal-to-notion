@@ -21,14 +21,14 @@
 <body>
 
 <h1>급식+시간표 통합 관리 시스템 사용 설명서</h1>
-<p style="font-size:13px; color:#666;">NEIS API → 노션 DB 자동화 도구 | 최종 업데이트: 2026-02-26</p>
+<p style="font-size:13px; color:#666;">NEIS API → 노션 DB 자동화 도구 | 최종 업데이트: 2026-03-06</p>
 
 <h2>메뉴 구성</h2>
 <table>
   <tr><th>메뉴</th><th>기능</th></tr>
-  <tr><td>1. 날짜 페이지 생성</td><td>해당 월 평일(월~금) 페이지를 노션 DB에 생성. 화목→시간표 "1", 월수금→시간표 "2" 자동 입력</td></tr>
+  <tr><td>1. 날짜 페이지 생성</td><td>해당 월 평일(월~금) 페이지를 노션 DB에 생성. 화목→SEED <code>1_45m_6p</code>, 월수금→SEED <code>2_45m_7p</code> 자동 입력</td></tr>
   <tr><td>2. 급식 메뉴 업데이트</td><td>NEIS API에서 급식 데이터를 가져와 기존 노션 페이지에 메뉴 업데이트</td></tr>
-  <tr><td>3. 시간표 이미지 삽입</td><td>각 페이지의 시간표 속성값(1~8)을 읽어 해당 이미지를 페이지에 삽입/교체</td></tr>
+  <tr><td>3. 시간표 이미지 삽입</td><td>각 페이지의 SEED 속성값을 읽어 해당 이미지를 페이지에 삽입/교체</td></tr>
   <tr><td>전체 실행 (1→2→3)</td><td>위 3단계를 순서대로 한 번에 실행</td></tr>
 </table>
 
@@ -46,7 +46,7 @@
 <div class="step">
   <div class="step-title">B. 시간표 수정이 필요한 경우</div>
   <div class="step-desc">
-    1. 노션 DB에서 해당 날짜의 <b>시간표 속성값</b>을 변경 (예: 2 → 5)<br>
+    1. 노션 DB에서 해당 날짜의 <b>SEED 속성값</b>을 변경 (예: <code>2_45m_7p</code> → <code>4_40m_6p</code>)<br>
     2. <code>[급식관리] > [3. 시간표 이미지 삽입]</code> 실행<br>
     3. 변경된 값에 해당하는 이미지로 <b>자동 교체</b>됨 (같은 이미지면 스킵)
   </div>
@@ -59,18 +59,24 @@
   20일 이전에는 자동 스킵됩니다.
 </p>
 
-<h2>시간표 이미지 매핑</h2>
+<h2>시간표 이미지 매핑 (SEED 속성)</h2>
 <table>
-  <tr><th>속성값</th><th>기본 요일</th><th>이미지</th></tr>
-  <tr><td>1</td><td>화, 목</td><td>1.png</td></tr>
-  <tr><td>2</td><td>월, 수, 금</td><td>2.png</td></tr>
-  <tr><td>3~8</td><td>수동 지정</td><td>3.png ~ 8.png</td></tr>
+  <tr><th>SEED 값</th><th>기본 요일</th><th>수업 형태</th><th>이미지 파일</th></tr>
+  <tr><td>1_45m_6p</td><td>화, 목</td><td>45분 × 6교시</td><td>1_45m_6p.png</td></tr>
+  <tr><td>2_45m_7p</td><td>월, 수, 금</td><td>45분 × 7교시</td><td>2_45m_7p.png</td></tr>
+  <tr><td>3_45m_4p_club</td><td>수동 지정</td><td>45분 × 4교시 + 동아리</td><td>3_45m_4p_club.png</td></tr>
+  <tr><td>4_40m_6p</td><td>수동 지정</td><td>40분 × 6교시</td><td>4_40m_6p.png</td></tr>
+  <tr><td>5_40m_7p</td><td>수동 지정</td><td>40분 × 7교시</td><td>5_40m_7p.png</td></tr>
+  <tr><td>6_35m_6p</td><td>수동 지정</td><td>35분 × 6교시</td><td>6_35m_6p.png</td></tr>
+  <tr><td>7_35m_7p</td><td>수동 지정</td><td>35분 × 7교시</td><td>7_35m_7p.png</td></tr>
+  <tr><td>8_exam_3p</td><td>수동 지정</td><td>시험 × 3교시 (이미지 준비 중)</td><td>8_exam_3p.png</td></tr>
+  <tr><td>9_exam_2p</td><td>수동 지정</td><td>시험 × 2교시 (이미지 준비 중)</td><td>9_exam_2p.png</td></tr>
 </table>
 <p style="font-size:12px; color:#777;">이미지 저장소: GitHub <code>getbetterwithme/meal-to-notion/timetable/</code></p>
 
 <h2>주의 사항</h2>
 <div class="warn">
-  <b>노션 DB 필수 속성:</b> 이름(제목), 날짜(날짜), 메뉴(텍스트), Month(선택), 시간표(선택, 값: 1~8)<br><br>
+  <b>노션 DB 필수 속성:</b> 이름(제목), 날짜(날짜), 메뉴(텍스트), Month(선택), SEED(선택, 값: 1_45m_6p 등)<br><br>
   <b>급식 데이터 없는 달:</b> NEIS에 데이터가 아직 등록되지 않은 경우 2단계가 0건으로 나옵니다. 추후 재실행하면 됩니다.<br><br>
   <b>권한 오류:</b> 스크립트를 처음 실행할 때 구글 권한 승인 팝업에서 「허용」을 눌러야 합니다.
 </div>
