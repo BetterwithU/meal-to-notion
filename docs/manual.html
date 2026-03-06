@@ -62,7 +62,7 @@
 <h2>메뉴 구성</h2>
 <table>
   <tr><th>메뉴</th><th>기능</th></tr>
-  <tr><td>1. 날짜 페이지 생성</td><td>해당 월 평일(월~금) 페이지를 노션 DB에 생성. 월수금→SEED <code>1_45m_6p</code>, 화목→SEED <code>2_45m_7p</code> 자동 입력</td></tr>
+  <tr><td>1. 날짜 페이지 생성</td><td>해당 월 평일(월~금) 페이지를 노션 DB에 생성.<br>신규: 월수금→SEED <code>1_45m_6p</code>, 화목→SEED <code>2_45m_7p</code> 자동 입력<br>기존 페이지: SEED를 요일 기본값으로 재설정 + 구글 시트 동기화<br><b>※ 수동으로 변경한 SEED도 덮어씌워짐 — 시간표 수정은 이 실행 후에 할 것</b></td></tr>
   <tr><td>2. 급식 메뉴 업데이트</td><td>NEIS API에서 급식 데이터를 가져와 기존 노션 페이지에 메뉴 업데이트</td></tr>
   <tr><td>3. 시간표 이미지 삽입</td><td>각 페이지의 SEED 속성값을 읽어 해당 이미지를 페이지에 삽입/교체</td></tr>
   <tr><td>전체 실행 (1→2→3)</td><td>위 3단계를 순서대로 한 번에 실행</td></tr>
@@ -82,6 +82,8 @@
 <div class="step">
   <div class="step-title">B. 시간표 수정이 필요한 경우</div>
   <div class="step-desc">
+    <span style="color:#e65100;"><b>⚠ [1. 날짜 페이지 생성]을 실행하면 SEED가 요일 기본값으로 초기화됩니다.</b></span><br>
+    시간표 수정은 반드시 [1] 실행 이후에 진행하세요.<br><br>
     1. 노션 DB에서 해당 날짜의 <b>SEED 속성값</b>을 변경 (예: <code>2_45m_7p</code> → <code>4_40m_6p</code>)<br>
     2. <code>[급식관리] > [3. 시간표 이미지 삽입]</code> 실행<br>
     3. 변경된 값에 해당하는 이미지로 <b>자동 교체</b>됨 (같은 이미지면 스킵)

@@ -143,17 +143,26 @@ function createMonthPages(yearMonth, config, existingMap) {
   let sheet = spreadsheet.getSheetByName(yearMonth);
   if (!sheet) {
     sheet = spreadsheet.insertSheet(yearMonth);
-    sheet.appendRow(['날짜', '메뉴', '연월', '노션페이지ID', '시간표']);
+    sheet.appendRow(['날짜', '메뉴', '연월', '노션페이지ID', 'SEED']);
   }
 
   // 시트에 이미 있는 날짜 확인
+  // 헤더 열 이름 업데이트 (시간표 → SEED)
+  if (sheet.getRange(1, 5).getValue() === '시간표') sheet.getRange(1, 5).setValue('SEED');
+
   const sheetData = sheet.getDataRange().getValues();
-  const sheetDates = new Set(sheetData.slice(1).map(row => {
+  const sheetDates = new Set();
+  const sheetDateRowMap = {};
+  sheetData.slice(1).forEach((row, i) => {
     const d = row[0];
-    return (d instanceof Date)
+    const ds = (d instanceof Date)
       ? Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd")
       : String(d).substring(0, 10);
-  }).filter(d => d.length === 10));
+    if (ds.length === 10) {
+      sheetDates.add(ds);
+      sheetDateRowMap[ds] = i + 2; // 1-indexed, 헤더 제외
+    }
+  });
 
   let created = 0;
 
@@ -176,6 +185,9 @@ function createMonthPages(yearMonth, config, existingMap) {
       const props = {};
       props[timetableProp] = { select: { name: timetableDefault } };
       patchNotionPage(pageId, props, config);
+      if (sheetDateRowMap[dateStr]) {
+        sheet.getRange(sheetDateRowMap[dateStr], 5).setValue(timetableDefault);
+      }
       Utilities.sleep(API_DELAY);
     }
 
@@ -563,7 +575,7 @@ function writeManualSheet() {
   // --- 메뉴 구성 ---
   r = writeSection(sheet, r, '메뉴 구성', secBg);
   r = writeTableHeader(sheet, r, ['메뉴', '기능'], hdrBg, hdrFont);
-  r = writeTableRow(sheet, r, ['1. 날짜 페이지 생성', '해당 월 평일(월~금) 페이지를 노션 DB에 생성\n월수금→SEED "1_45m_6p", 화목→SEED "2_45m_7p" 자동 입력']);
+  r = writeTableRow(sheet, r, ['1. 날짜 페이지 생성', '해당 월 평일(월~금) 페이지를 노션 DB에 생성\n신규: 월수금→SEED "1_45m_6p", 화목→SEED "2_45m_7p" 자동 입력\n기존 페이지: SEED를 요일 기본값으로 재설정 + 구글 시트 동기화\n※ 수동으로 변경한 SEED도 덮어씌워짐 — 시간표 수정은 이 실행 후에 할 것']);
   r = writeTableRow(sheet, r, ['2. 급식 메뉴 업데이트', 'NEIS API에서 급식 데이터를 가져와 기존 노션 페이지에 메뉴 업데이트']);
   r = writeTableRow(sheet, r, ['3. 시간표 이미지 삽입', '각 페이지의 SEED 속성값을 읽어 해당 이미지를 페이지에 삽입/교체']);
   r = writeTableRow(sheet, r, ['전체 실행 (1→2→3)', '위 3단계를 순서대로 한 번에 실행']);
@@ -572,7 +584,7 @@ function writeManualSheet() {
   // --- 기본 워크플로우 ---
   r = writeSection(sheet, r, '기본 워크플로우', secBg);
   r = writeRow(sheet, r, 'A. 매월 새 달 준비', '1. [급식관리] > [전체 실행] 클릭\n2. 연월 입력 (예: 202603)\n3. 자동으로 날짜 생성 → 급식 입력 → 시간표 이미지 삽입', true);
-  r = writeRow(sheet, r, 'B. 시간표 수정 시', '1. 노션 DB에서 해당 날짜의 SEED 속성값 변경 (예: 2_45m_7p → 4_40m_6p)\n2. [급식관리] > [3. 시간표 이미지 삽입] 실행\n3. 변경된 값에 해당하는 이미지로 자동 교체됨', true);
+  r = writeRow(sheet, r, 'B. 시간표 수정 시', '⚠ [1. 날짜 페이지 생성]을 실행하면 SEED가 요일 기본값으로 초기화됨\n→ 시간표 수정은 반드시 [1] 실행 이후에 할 것\n1. 노션 DB에서 해당 날짜의 SEED 속성값 변경 (예: 2_45m_7p → 4_40m_6p)\n2. [급식관리] > [3. 시간표 이미지 삽입] 실행\n3. 변경된 값에 해당하는 이미지로 자동 교체됨', true);
   r++;
 
   // --- 자동 트리거 ---
