@@ -27,7 +27,7 @@ function initializeConfig() {
     'ATPT_OFCDC_SC_CODE': '여기에_교육청코드',
     'SD_SCHUL_CODE': '여기에_학교코드',
     'SPREADSHEET_ID': '여기에_스프레드시트_ID',
-    'TIMETABLE_PROP_NAME': '시간표'
+    'TIMETABLE_PROP_NAME': 'SEED'
   });
   Logger.log('설정 저장 완료');
 }
@@ -38,14 +38,15 @@ function getConfig() {
 
 // ===== 이미지 URL 매핑 =====
 const TIMETABLE_IMAGES = {
-  '1': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/1.png',
-  '2': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/2.png',
-  '3': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/3.png',
-  '4': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/4.png',
-  '5': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/5.png',
-  '6': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/6.png',
-  '7': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/7.png',
-  '8': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/8.png'
+  '1_45m_6p':      'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/1_45m_6p.png',
+  '2_45m_7p':      'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/2_45m_7p.png',
+  '3_45m_4p_club': 'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/3_45m_4p_club.png',
+  '4_40m_6p':      'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/4_40m_6p.png',
+  '5_40m_7p':      'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/5_40m_7p.png',
+  '6_35m_6p':      'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/6_35m_6p.png',
+  '7_35m_7p':      'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/7_35m_7p.png',
+  '8_exam_3p':     'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/8_exam_3p.png',
+  '9_exam_2p':     'https://raw.githubusercontent.com/getbetterwithme/meal-to-notion/main/timetable/9_exam_2p.png'
 };
 
 const API_DELAY = 150; // Notion rate limit: 3req/s, 150ms면 안전
@@ -160,7 +161,7 @@ function createMonthPages(yearMonth, config, existingMap) {
     let pageId = existingMap[dateStr];
     // 요일에 따라 시간표 기본값: 화목(2,4)="1", 월수금(1,3,5)="2"
     const dayOfWeek = new Date(dateStr).getDay();
-    const timetableDefault = (dayOfWeek === 2 || dayOfWeek === 4) ? '1' : '2';
+    const timetableDefault = (dayOfWeek === 2 || dayOfWeek === 4) ? '1_45m_6p' : '2_45m_7p';
 
     if (!pageId) {
       pageId = createNotionPage(dateStr, yearMonth, timetableDefault, config);
