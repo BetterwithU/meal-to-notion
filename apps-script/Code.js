@@ -159,7 +159,7 @@ function createMonthPages(yearMonth, config, existingMap) {
 
   for (const dateStr of weekdays) {
     let pageId = existingMap[dateStr];
-    // 요일에 따라 시간표 기본값: 화목(2,4)="1", 월수금(1,3,5)="2"
+    // 요일에 따라 시간표 기본값: 월수금(1,3,5)=6교시, 화목(2,4)=7교시
     const dayOfWeek = new Date(dateStr).getDay();
     const timetableDefault = (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 5) ? '1_45m_6p' : '2_45m_7p';
 
@@ -169,6 +169,13 @@ function createMonthPages(yearMonth, config, existingMap) {
         created++;
         existingMap[dateStr] = pageId;
       }
+      Utilities.sleep(API_DELAY);
+    } else {
+      // 기존 페이지: SEED 속성을 요일 기본값으로 업데이트
+      const timetableProp = config.TIMETABLE_PROP_NAME || 'SEED';
+      const props = {};
+      props[timetableProp] = { select: { name: timetableDefault } };
+      patchNotionPage(pageId, props, config);
       Utilities.sleep(API_DELAY);
     }
 
