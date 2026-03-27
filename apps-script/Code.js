@@ -594,89 +594,45 @@ function writeManualSheet() {
   if (sheet) sheet.clear();
   else sheet = ss.insertSheet('사용설명서', 0);
 
-  sheet.setColumnWidth(1, 200);
-  sheet.setColumnWidth(2, 500);
+  sheet.setColumnWidth(1, 220);
+  sheet.setColumnWidth(2, 480);
 
   const hdrBg = '#1a73e8';
   const hdrFont = '#ffffff';
   const secBg = '#e8f0fe';
-  const warnBg = '#fff8e1';
+  const warnBg = '#fff3cd';
 
   let r = 1;
 
-  // 제목
-  sheet.getRange(r, 1, 1, 2).merge()
-    .setValue('급식+시간표 통합 관리 시스템 사용 설명서')
-    .setFontSize(16).setFontWeight('bold').setBackground('#f1f3f4')
-    .setHorizontalAlignment('center');
-  sheet.setRowHeight(r, 40);
-  r += 2;
-
-  // --- 새 컴퓨터에서 이어서 작업하기 ---
-  r = writeSection(sheet, r, '새 컴퓨터에서 이어서 작업하기', '#fce8e6');
-  r = writeRow(sheet, r, '1단계: 저장소 가져오기', '처음: git clone https://github.com/getbetterwithme/meal-to-notion.git\n이미 있으면: git pull origin main', true);
-  r = writeRow(sheet, r, '2단계: clasp 설치 및 로그인', 'npm install -g @google/clasp\nclasp login  →  브라우저에서 구글 계정 허용', true);
-  r = writeRow(sheet, r, '3단계: .clasp.json 만들기', 'apps-script/ 폴더 안에 .clasp.json 파일 직접 생성 (GitHub에 안 올라감)\n내용: { "scriptId": "1EH5MzU64_AxOQhJUdROvBFZz51kNNNFrIpN_U_LPiF3xgefYzyU0mDPw", "rootDir": "." }', true);
-  r = writeRow(sheet, r, '4단계: Apps Script 반영', 'cd apps-script\nclasp push\n→ 이후 코드 수정 시마다 clasp push로 반영', true);
-  r++;
-
-  // --- 메뉴 구성 ---
-  r = writeSection(sheet, r, '메뉴 구성', secBg);
-  r = writeTableHeader(sheet, r, ['메뉴', '기능'], hdrBg, hdrFont);
-  r = writeTableRow(sheet, r, ['1. 날짜 페이지 생성', '해당 월 평일(월~금) 페이지를 노션 DB에 생성\n신규: 월수금→SEED "1_45m_6p", 화목→SEED "2_45m_7p" 자동 입력\n기존 페이지: SEED를 요일 기본값으로 재설정 + 구글 시트 동기화\n※ 수동으로 변경한 SEED도 덮어씌워짐 — 시간표 수정은 이 실행 후에 할 것']);
-  r = writeTableRow(sheet, r, ['2. 급식 메뉴 업데이트', 'NEIS API에서 급식 데이터를 가져와 기존 노션 페이지에 메뉴 업데이트']);
-  r = writeTableRow(sheet, r, ['3. 시간표 이미지 삽입', '각 페이지의 SEED 속성값을 읽어 해당 이미지를 페이지에 삽입/교체']);
+  // --- 메뉴 기능 ---
+  r = writeSection(sheet, r, '메뉴 기능', secBg);
+  r = writeTableHeader(sheet, r, ['메뉴', '하는 일'], hdrBg, hdrFont);
+  r = writeTableRow(sheet, r, ['1. 날짜 페이지 생성', '해당 월 평일 페이지 생성 + SEED 요일 기본값 설정\n⚠️ 기존 페이지도 SEED가 초기화됨 — 시간표 수정은 이 작업 이후에 할 것']);
+  r = writeTableRow(sheet, r, ['2. 급식 메뉴 업데이트', 'NEIS에서 급식 데이터를 가져와 각 날짜 페이지에 입력']);
+  r = writeTableRow(sheet, r, ['3. 시간표 이미지 삽입', '각 페이지의 SEED 값을 읽어 해당 시간표 이미지 삽입/교체']);
   r = writeTableRow(sheet, r, ['전체 실행 (1→2→3)', '위 3단계를 순서대로 한 번에 실행']);
   r++;
 
-  // --- 기본 워크플로우 ---
-  r = writeSection(sheet, r, '기본 워크플로우', secBg);
-  r = writeRow(sheet, r, 'A. 매월 새 달 준비', '1. [급식관리] > [전체 실행] 클릭\n2. 연월 입력 (예: 202603)\n3. 자동으로 날짜 생성 → 급식 입력 → 시간표 이미지 삽입', true);
-  r = writeRow(sheet, r, 'B. 시간표 수정 시', '⚠ [1. 날짜 페이지 생성]을 실행하면 SEED가 요일 기본값으로 초기화됨\n→ 시간표 수정은 반드시 [1] 실행 이후에 할 것\n1. 노션 DB에서 해당 날짜의 SEED 속성값 변경 (예: 2_45m_7p → 4_40m_6p)\n2. [급식관리] > [3. 시간표 이미지 삽입] 실행\n3. 변경된 값에 해당하는 이미지로 자동 교체됨', true);
+  // --- 워크플로우 ---
+  r = writeSection(sheet, r, '워크플로우', secBg);
+  r = writeTableHeader(sheet, r, ['상황', '순서'], hdrBg, hdrFont);
+  r = writeTableRow(sheet, r, ['매월 초 준비', '[전체 실행] → 연월 입력 (예: 202604)']);
+  r = writeTableRow(sheet, r, ['특정 날 시간표 변경', '① [1. 날짜 페이지 생성] 실행\n② 노션에서 해당 날짜 SEED 속성 변경\n③ [3. 시간표 이미지 삽입] 실행']);
+  r = writeTableRow(sheet, r, ['자동 실행', '매월 20일~말일, 다음 달 날짜 생성 + 급식 업데이트 자동 수행']);
   r++;
 
-  // --- 자동 트리거 ---
-  r = writeSection(sheet, r, '자동 트리거', secBg);
-  r = writeRow(sheet, r, '실행 조건', '매월 20일~말일 사이 매일 자동 실행\n다음 달 날짜 생성 + 급식 업데이트 수행\n20일 이전에는 자동 스킵', false);
-  r++;
-
-  // --- 시간표 이미지 매핑 ---
-  r = writeSection(sheet, r, '시간표 이미지 매핑 (SEED 속성)', secBg);
-  r = writeTableHeader(sheet, r, ['SEED 값', '기본 요일', '수업 형태'], hdrBg, hdrFont);
-  r = writeTableRow(sheet, r, ['1_45m_6p', '월, 수, 금', '45분 × 6교시']);
-  r = writeTableRow(sheet, r, ['2_45m_7p', '화, 목', '45분 × 7교시']);
-  r = writeTableRow(sheet, r, ['3_45m_4p_club', '수동 지정', '45분 × 4교시 + 동아리']);
-  r = writeTableRow(sheet, r, ['4_40m_6p', '수동 지정', '40분 × 6교시']);
-  r = writeTableRow(sheet, r, ['5_40m_7p', '수동 지정', '40분 × 7교시']);
-  r = writeTableRow(sheet, r, ['6_35m_6p', '수동 지정', '35분 × 6교시']);
-  r = writeTableRow(sheet, r, ['7_35m_7p', '수동 지정', '35분 × 7교시']);
-  r = writeTableRow(sheet, r, ['8_exam_3p', '수동 지정', '시험 × 3교시 (이미지 준비 중)']);
-  r = writeTableRow(sheet, r, ['9_exam_2p', '수동 지정', '시험 × 2교시 (이미지 준비 중)']);
-  sheet.getRange(r, 1, 1, 2).merge()
-    .setValue('이미지 저장소: GitHub getbetterwithme/meal-to-notion/timetable/')
-    .setFontSize(9).setFontColor('#888888');
-  r += 2;
-
-  // --- 주의 사항 ---
-  r = writeSection(sheet, r, '주의 사항', warnBg);
-  r = writeRow(sheet, r, '필수 속성', '이름(제목), 날짜(날짜), 메뉴(텍스트), Month(선택), SEED(선택, 값: 1_45m_6p 등)', false);
-  r = writeRow(sheet, r, '급식 없는 달', 'NEIS에 데이터 미등록 시 2단계 0건. 추후 재실행', false);
-  r = writeRow(sheet, r, '권한 오류', '스크립트 첫 실행 시 구글 권한 승인 팝업에서 허용 필요', false);
-  r++;
-
-  // --- 문제 해결 ---
-  r = writeSection(sheet, r, '문제 해결', secBg);
-  r = writeTableHeader(sheet, r, ['증상', '해결'], hdrBg, hdrFont);
-  r = writeTableRow(sheet, r, ['페이지 생성 실패', '노션 DB ID와 API 토큰 확인 → initializeConfig() 재실행']);
-  r = writeTableRow(sheet, r, ['급식 데이터 없음', 'NEIS API 키와 학교 코드 확인']);
-  r = writeTableRow(sheet, r, ['이미지 미표시', 'GitHub 저장소에 이미지 파일 확인']);
-  r++;
-
-  // --- 링크 ---
-  r = writeSection(sheet, r, '관련 링크', secBg);
-  r = writeRow(sheet, r, '노션 데이터베이스', 'https://www.notion.so/juneywooky/2fecd3403dc38007a150fe08df7c5e8f', false);
-  r = writeRow(sheet, r, 'GitHub 저장소', 'https://github.com/getbetterwithme/meal-to-notion', false);
-  r = writeRow(sheet, r, 'Apps Script', 'https://script.google.com/d/1EH5MzU64_AxOQhJUdROvBFZz51kNNNFrIpN_U_LPiF3xgefYzyU0mDPw/edit', false);
+  // --- SEED 매핑 ---
+  r = writeSection(sheet, r, 'SEED 값 → 시간표 매핑', secBg);
+  r = writeTableHeader(sheet, r, ['SEED 값 (노션 선택항목)', '시간표 형태'], hdrBg, hdrFont);
+  r = writeTableRow(sheet, r, ['1_45m_6p  ← 월·수·금 기본값', '45분 × 6교시']);
+  r = writeTableRow(sheet, r, ['2_45m_7p  ← 화·목 기본값', '45분 × 7교시']);
+  r = writeTableRow(sheet, r, ['3_45m_4p_club', '45분 × 4교시 + 동아리']);
+  r = writeTableRow(sheet, r, ['4_40m_6p', '40분 × 6교시']);
+  r = writeTableRow(sheet, r, ['5_40m_7p', '40분 × 7교시']);
+  r = writeTableRow(sheet, r, ['6_35m_6p', '35분 × 6교시']);
+  r = writeTableRow(sheet, r, ['7_35m_7p', '35분 × 7교시']);
+  r = writeTableRow(sheet, r, ['8_exam_3p', '시험 × 3교시']);
+  r = writeTableRow(sheet, r, ['9_exam_2p', '시험 × 2교시']);
 
   SpreadsheetApp.flush();
   Logger.log('사용설명서 작성 완료');
