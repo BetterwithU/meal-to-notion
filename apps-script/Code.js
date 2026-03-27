@@ -51,6 +51,32 @@ const TIMETABLE_IMAGES = {
 
 const API_DELAY = 150; // Notion rate limit: 3req/s, 150ms면 안전
 
+// ===== 로그 기록 =====
+function writeLog(step, date, result, detail) {
+  const config = getConfig();
+  const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  let sheet = ss.getSheetByName('로그');
+  if (!sheet) {
+    sheet = ss.insertSheet('로그');
+    sheet.appendRow(['실행 시간', '단계', '날짜', '결과', '변경 내용']);
+    sheet.getRange(1, 1, 1, 5)
+      .setFontWeight('bold')
+      .setBackground('#1a73e8')
+      .setFontColor('#ffffff');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(1, 170);
+    sheet.setColumnWidth(2, 80);
+    sheet.setColumnWidth(3, 110);
+    sheet.setColumnWidth(4, 50);
+    sheet.setColumnWidth(5, 400);
+  }
+  const now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy.MM.dd HH:mm:ss');
+  sheet.insertRowAfter(1);
+  const row = sheet.getRange(2, 1, 1, 5);
+  row.setValues([[now, step, date, result ? '✅' : '❌', detail]]);
+  if (!result) row.setBackground('#fce8e6');
+}
+
 // ===== 트리거 전용: 매일 실행, 20일~말일만 동작 =====
 function scheduledNextMonthUpdate() {
   const now = new Date();
@@ -177,6 +203,9 @@ function createMonthPages(yearMonth, config, existingMap) {
       if (pageId) {
         created++;
         existingMap[dateStr] = pageId;
+        writeLog('1단계', dateStr, true, `생성: SEED=${timetableDefault}`);
+      } else {
+        writeLog('1단계', dateStr, false, '페이지 생성 실패');
       }
       Utilities.sleep(API_DELAY);
     } else {
@@ -184,10 +213,11 @@ function createMonthPages(yearMonth, config, existingMap) {
       const timetableProp = config.TIMETABLE_PROP_NAME || 'SEED';
       const props = {};
       props[timetableProp] = { select: { name: timetableDefault } };
-      patchNotionPage(pageId, props, config);
+      const patched = patchNotionPage(pageId, props, config);
       if (sheetDateRowMap[dateStr]) {
         sheet.getRange(sheetDateRowMap[dateStr], 5).setValue(timetableDefault);
       }
+      writeLog('1단계', dateStr, patched, patched ? `SEED 초기화: ${timetableDefault}` : 'SEED 업데이트 실패');
       Utilities.sleep(API_DELAY);
     }
 
@@ -234,6 +264,7 @@ function updateMealData(yearMonth, config, pagesMap) {
     const pageId = pagesMap[meal.date];
     if (!pageId) {
       Logger.log(`[2단계] ${meal.date} 페이지 없음, 스킵`);
+      writeLog('2단계', meal.date, false, '페이지 없음, 스킵');
       continue;
     }
 
@@ -247,6 +278,9 @@ function updateMealData(yearMonth, config, pagesMap) {
       if (sheet && sheetDateMap[meal.date]) {
         sheet.getRange(sheetDateMap[meal.date], 2).setValue(meal.menu);
       }
+      writeLog('2단계', meal.date, true, `급식: ${meal.menu}`);
+    } else {
+      writeLog('2단계', meal.date, false, '급식 업데이트 실패');
     }
     Utilities.sleep(API_DELAY);
   }
@@ -264,17 +298,26 @@ function updateTimetableImages(yearMonth, config) {
   let inserted = 0;
 
   for (const page of pagesWithTimetable) {
-    if (!page.timetableValue) continue; // 시간표 미지정
+    if (!page.timetableValue) {
+      writeLog('3단계', page.date || page.id, false, 'SEED 미지정, 스킵');
+      continue;
+    }
 
     const imageUrl = TIMETABLE_IMAGES[page.timetableValue];
-    if (!imageUrl) continue;
+    if (!imageUrl) {
+      writeLog('3단계', page.date || page.id, false, `알 수 없는 SEED값: ${page.timetableValue}`);
+      continue;
+    }
 
     // 기존 이미지 블록 확인
     const existingBlocks = getPageBlocks(page.id, config);
     const existingImage = existingBlocks.find(b => b.type === 'image');
 
     // 이미 같은 이미지면 스킵
-    if (existingImage && existingImage.image?.external?.url === imageUrl) continue;
+    if (existingImage && existingImage.image?.external?.url === imageUrl) {
+      writeLog('3단계', page.date || page.id, true, `스킵 (이미 동일 이미지: ${page.timetableValue})`);
+      continue;
+    }
 
     // 기존 이미지 삭제
     if (existingImage) {
@@ -284,7 +327,12 @@ function updateTimetableImages(yearMonth, config) {
 
     // 새 이미지 삽입
     const success = appendImageBlock(page.id, imageUrl, config);
-    if (success) inserted++;
+    if (success) {
+      inserted++;
+      writeLog('3단계', page.date || page.id, true, `이미지 삽입: ${page.timetableValue}${existingImage ? ' (교체)' : ''}`);
+    } else {
+      writeLog('3단계', page.date || page.id, false, `이미지 삽입 실패: ${page.timetableValue}`);
+    }
     Utilities.sleep(API_DELAY);
   }
 
