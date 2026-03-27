@@ -607,16 +607,27 @@ function writeManualSheet() {
   // --- 메뉴 기능 ---
   r = writeSection(sheet, r, '메뉴 기능', secBg);
   r = writeTableHeader(sheet, r, ['메뉴', '하는 일'], hdrBg, hdrFont);
-  r = writeTableRow(sheet, r, ['1. 날짜 페이지 생성', '해당 월 평일 페이지 생성 + SEED 요일 기본값 설정\n⚠️ 기존 페이지도 SEED가 초기화됨 — 시간표 수정은 이 작업 이후에 할 것']);
+  // 1번 경고행: 노란 배경
+  sheet.getRange(r, 1).setValue('1. 날짜 페이지 생성').setFontWeight('bold').setFontSize(10);
+  sheet.getRange(r, 2).setValue('해당 월 평일 페이지 생성 + SEED 요일 기본값 설정\n⚠️ 기존 페이지도 SEED가 초기화됨 — 시간표 수정은 이 작업 이후에 할 것')
+    .setFontSize(10).setWrap(true).setBackground(warnBg);
+  sheet.getRange(r, 1).setBackground(warnBg);
+  r++;
   r = writeTableRow(sheet, r, ['2. 급식 메뉴 업데이트', 'NEIS에서 급식 데이터를 가져와 각 날짜 페이지에 입력']);
   r = writeTableRow(sheet, r, ['3. 시간표 이미지 삽입', '각 페이지의 SEED 값을 읽어 해당 시간표 이미지 삽입/교체']);
-  r = writeTableRow(sheet, r, ['전체 실행 (1→2→3)', '위 3단계를 순서대로 한 번에 실행']);
+  // 전체 실행행: 굵게 + 연한 초록
+  sheet.getRange(r, 1).setValue('전체 실행 (1→2→3)').setFontWeight('bold').setFontSize(10).setBackground('#d9ead3');
+  sheet.getRange(r, 2).setValue('위 3단계를 순서대로 한 번에 실행').setFontSize(10).setWrap(true).setBackground('#d9ead3');
+  r++;
   r++;
 
   // --- 워크플로우 ---
   r = writeSection(sheet, r, '워크플로우', secBg);
   r = writeTableHeader(sheet, r, ['상황', '순서'], hdrBg, hdrFont);
-  r = writeTableRow(sheet, r, ['매월 초 준비', '[전체 실행] → 연월 입력 (예: 202604)']);
+  // 매월 초: 초록 강조
+  sheet.getRange(r, 1).setValue('매월 초 준비').setFontWeight('bold').setFontSize(10).setBackground('#d9ead3');
+  sheet.getRange(r, 2).setValue('[전체 실행] → 연월 입력 (예: 202604)').setFontSize(10).setWrap(true).setBackground('#d9ead3');
+  r++;
   r = writeTableRow(sheet, r, ['특정 날 시간표 변경', '① [1. 날짜 페이지 생성] 실행\n② 노션에서 해당 날짜 SEED 속성 변경\n③ [3. 시간표 이미지 삽입] 실행']);
   r = writeTableRow(sheet, r, ['자동 실행', '매월 20일~말일, 다음 달 날짜 생성 + 급식 업데이트 자동 수행']);
   r++;
@@ -624,8 +635,13 @@ function writeManualSheet() {
   // --- SEED 매핑 ---
   r = writeSection(sheet, r, 'SEED 값 → 시간표 매핑', secBg);
   r = writeTableHeader(sheet, r, ['SEED 값 (노션 선택항목)', '시간표 형태'], hdrBg, hdrFont);
-  r = writeTableRow(sheet, r, ['1_45m_6p  ← 월·수·금 기본값', '45분 × 6교시']);
-  r = writeTableRow(sheet, r, ['2_45m_7p  ← 화·목 기본값', '45분 × 7교시']);
+  // 기본값 행: 초록 배경 + 굵게
+  sheet.getRange(r, 1).setValue('1_45m_6p').setFontWeight('bold').setFontSize(10).setBackground('#d9ead3');
+  sheet.getRange(r, 2).setValue('45분 × 6교시  ←  월·수·금 기본값').setFontSize(10).setBackground('#d9ead3').setFontWeight('bold');
+  r++;
+  sheet.getRange(r, 1).setValue('2_45m_7p').setFontWeight('bold').setFontSize(10).setBackground('#d9ead3');
+  sheet.getRange(r, 2).setValue('45분 × 7교시  ←  화·목 기본값').setFontSize(10).setBackground('#d9ead3').setFontWeight('bold');
+  r++;
   r = writeTableRow(sheet, r, ['3_45m_4p_club', '45분 × 4교시 + 동아리']);
   r = writeTableRow(sheet, r, ['4_40m_6p', '40분 × 6교시']);
   r = writeTableRow(sheet, r, ['5_40m_7p', '40분 × 7교시']);
