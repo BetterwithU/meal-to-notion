@@ -604,6 +604,14 @@ function writeManualSheet() {
 
   let r = 1;
 
+  // --- 연결 정보 ---
+  r = writeSection(sheet, r, '연결 정보', secBg);
+  r = writeTableHeader(sheet, r, ['항목', '링크'], hdrBg, hdrFont);
+  sheet.getRange(r, 1).setValue('노션 DB').setFontSize(10);
+  sheet.getRange(r, 2).setFormula('=HYPERLINK("https://www.notion.so/juneywooky/2fecd3403dc38007a150fe08df7c5e8f?v=2fecd3403dc381daa712000c0d522650","노션 페이지 열기")').setFontSize(10);
+  r++;
+  r++;
+
   // --- 메뉴 기능 ---
   r = writeSection(sheet, r, '메뉴 기능', secBg);
   r = writeTableHeader(sheet, r, ['메뉴', '하는 일'], hdrBg, hdrFont);
