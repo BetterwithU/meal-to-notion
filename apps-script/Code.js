@@ -46,7 +46,8 @@ const TIMETABLE_IMAGES = {
   '6_35m_6p':      'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/6_35m_6p.png',
   '7_35m_7p':      'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/7_35m_7p.png',
   '8_exam_3p':     'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/8_exam_3p.png',
-  '9_exam_2p':     'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/9_exam_2p.png'
+  '9_exam_2p':     'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/9_exam_2p.png',
+  '10_40m_4p_club':'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/10_40m_4p_club.png'
 };
 
 const API_DELAY = 150; // Notion rate limit: 3req/s, 150ms면 안전
@@ -657,6 +658,7 @@ function writeManualSheet() {
   r = writeTableRow(sheet, r, ['7_35m_7p', '35분 × 7교시']);
   r = writeTableRow(sheet, r, ['8_exam_3p', '시험 × 3교시']);
   r = writeTableRow(sheet, r, ['9_exam_2p', '시험 × 2교시']);
+  r = writeTableRow(sheet, r, ['10_40m_4p_club', '40분 × 4교시 + 동아리']);
 
   SpreadsheetApp.flush();
   Logger.log('사용설명서 작성 완료');
