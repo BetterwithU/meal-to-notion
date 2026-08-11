@@ -13,6 +13,8 @@ function onOpen() {
     .addItem('3. 시간표 이미지 삽입', 'manualUpdateTimetable')
     .addSeparator()
     .addItem('전체 실행 (1→2→3)', 'manualFullUpdate')
+    .addSeparator()
+    .addItem('사용설명서 새로고침', 'writeManualSheet')
     .addToUi();
 }
 
