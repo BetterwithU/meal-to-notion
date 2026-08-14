@@ -99,6 +99,11 @@
   .tag.ok{background:var(--ok-soft);color:var(--ok)}
   .tag.bad{background:var(--bad-soft);color:var(--bad)}
   .acts{display:flex;gap:10px;flex-wrap:wrap}
+  /* 화면 아래에서도 대상 연월이 반드시 보이도록 */
+  .target{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;
+    background:var(--brand-soft);border:1px solid #c6dafc;border-radius:9px;padding:10px 13px;
+    font-size:12.5px;color:#174ea6}
+  .target b{font-size:17px;font-family:Consolas,monospace;letter-spacing:.5px}
   .log{font-family:Consolas,monospace;font-size:11.5px;background:#22252a;color:#cdd3d9;border-radius:9px;
     padding:12px 14px;margin-top:14px;max-height:170px;overflow:auto;display:none}
   .log .t{color:#7f8790} .log .g{color:#7ee08a} .log .r{color:#ff9c96}
@@ -203,6 +208,11 @@
 <section class="panel">
   <h2>월간 작업</h2>
   <p class="hint">스프레드시트 [급식관리] 메뉴에 있던 기능입니다. 이제 여기서 실행합니다.</p>
+  <div class="target">
+    <span>아래 버튼은 이 달에 실행됩니다 →</span>
+    <b id="targetYm">—</b>
+    <select id="ym2" onchange="syncYm(this.value)"></select>
+  </div>
   <div class="acts">
     <button onclick="runStep(1)">1. 날짜 페이지 생성</button>
     <button onclick="runStep(2)">2. 급식 메뉴 불러오기</button>
@@ -285,17 +295,33 @@ function logTo(id, msg, cls){
 
 // ---------- 연월 선택 ----------
 (function initYm(){
-  var sel = document.getElementById('ym'), now = new Date();
+  var sel = document.getElementById('ym'), sel2 = document.getElementById('ym2');
+  var now = new Date();
   for (var i = -2; i <= 3; i++){
     var d = new Date(now.getFullYear(), now.getMonth() + i, 1);
     var v = d.getFullYear() + ('0' + (d.getMonth()+1)).slice(-2);
-    var o = document.createElement('option');
-    o.value = v; o.textContent = d.getFullYear() + '년 ' + (d.getMonth()+1) + '월';
-    if (i === 0) o.selected = true;
-    sel.appendChild(o);
+    var label = d.getFullYear() + '년 ' + (d.getMonth()+1) + '월 (' + v + ')';
+    [sel, sel2].forEach(function(s){
+      var o = document.createElement('option');
+      o.value = v; o.textContent = label;
+      if (i === 0) o.selected = true;
+      s.appendChild(o);
+    });
   }
-  sel.onchange = loadDashboard;
+  sel.onchange = function(){ sel2.value = sel.value; loadDashboard(); };
 })();
+
+// 아래쪽 선택을 바꾸면 위쪽과 맞춘다 (둘이 어긋나면 그게 더 위험하다)
+function syncYm(v){
+  document.getElementById('ym').value = v;
+  loadDashboard();
+}
+function updateTarget(){
+  var ym = document.getElementById('ym').value;
+  document.getElementById('ym2').value = ym;
+  document.getElementById('targetYm').textContent =
+    ym + '  (' + ym.substring(0,4) + '년 ' + parseInt(ym.substring(4),10) + '월)';
+}
 
 // ---------- 대시보드 ----------
 function loadDashboard(){
@@ -309,6 +335,7 @@ function loadDashboard(){
 
 function render(d){
   DATA = d;
+  updateTarget();
   document.getElementById('synced').textContent = '마지막 동기화 ' + d.syncedAt;
   document.getElementById('tokenWarn').style.display = d.hasGithubToken ? 'none' : 'block';
 
@@ -544,7 +571,25 @@ function applyPick(){
 // ---------- 월간 작업 ----------
 function runStep(n){
   var labels = {1:'날짜 페이지 생성', 2:'급식 메뉴 불러오기', 3:'시간표 이미지 삽입', 9:'설명서 갱신'};
-  if (n === 1 && !confirm('1번을 실행하면 수동으로 지정한 시간표가 요일 기본값으로 초기화됩니다.\n계속할까요?')) return;
+  var sel = document.getElementById('ym');
+  var ymText = sel.options[sel.selectedIndex].textContent;
+
+  // 화면 아래에서는 상단 연월 선택이 보이지 않는다.
+  // 엉뚱한 달을 건드리지 않도록 대상 연월을 확인 창에 반드시 표시한다.
+  if (n === 1){
+    var used = (DATA ? DATA.days.filter(function(d){
+      return d.seed && d.seed !== '1_45m_6p' && d.seed !== '2_45m_7p'; }) : []);
+    var msg = '【' + ymText + '】의 날짜 페이지를 생성합니다.\n\n'
+      + '⚠ 수동으로 지정한 시간표가 요일 기본값으로 초기화됩니다.\n';
+    msg += used.length
+      ? '\n초기화될 특수 일정 ' + used.length + '건:\n'
+        + used.map(function(d){ return '  · ' + d.date + ' — ' + d.seed; }).join('\n')
+        + '\n\n실행 후 달력에서 다시 지정하셔야 합니다.\n\n계속할까요?'
+      : '\n지금 이 달에 수동 지정된 시간표는 없습니다.\n\n계속할까요?';
+    if (!confirm(msg)) return;
+  } else if (n !== 9) {
+    if (!confirm('【' + ymText + '】 기준으로 ' + labels[n] + '을(를) 실행합니다.\n계속할까요?')) return;
+  }
   var btns = document.querySelectorAll('.acts button');
   for (var i = 0; i < btns.length; i++) btns[i].disabled = true;
   logTo('log2', labels[n] + ' 실행 중… (한참 걸릴 수 있습니다)');
