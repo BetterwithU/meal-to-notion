@@ -36,7 +36,10 @@
   button:hover:not(:disabled){background:#f1f3f5}
   button:disabled{opacity:.5;cursor:not-allowed}
   button.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
-  button.primary:hover:not(:disabled){filter:brightness(1.07)}
+  /* 아래 button:hover 규칙이 우선순위에서 이겨 배경이 회색이 되면
+     흰 글씨가 보이지 않는다. 배경을 명시해 되돌린다. */
+  button.primary:hover:not(:disabled){background:var(--brand);border-color:var(--brand);
+    color:#fff;filter:brightness(1.08)}
   button.big{padding:12px 20px;font-size:15px;width:100%}
 
   /* 대상 연월 — 실행 대상이 항상 눈에 보이도록 */
