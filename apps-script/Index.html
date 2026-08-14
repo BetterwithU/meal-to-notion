@@ -13,7 +13,7 @@
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:"Malgun Gothic","맑은 고딕",-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.55}
+    font-family:"Malgun Gothic","맑은 고딕",-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.55}
   .wrap{max-width:1180px;margin:0 auto;padding:18px 20px 60px}
   header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
   h1{font-size:21px;margin:0;font-weight:700}
@@ -28,8 +28,8 @@
   .pane{display:none} .pane.on{display:block}
 
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px}
-  .panel h2{font-size:15px;margin:0 0 3px;font-weight:700}
-  .panel .hint{color:var(--muted);font-size:12.5px;margin:0 0 14px}
+  .panel h2{font-size:16.5px;margin:0 0 3px;font-weight:700}
+  .panel .hint{color:var(--muted);font-size:13.5px;margin:0 0 14px}
   select,input[type=text],input[type=date]{font:inherit;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
   input[type=text]{width:100%}
   button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:#fff;padding:8px 14px;color:var(--ink)}
@@ -49,8 +49,8 @@
 
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px}
   .stat{border:1px solid var(--line);border-radius:10px;padding:13px 14px}
-  .stat .n{font-size:25px;font-weight:700;line-height:1.15}
-  .stat .l{color:var(--muted);font-size:12px;margin-top:2px}
+  .stat .n{font-size:27px;font-weight:700;line-height:1.15}
+  .stat .l{color:var(--muted);font-size:13px;margin-top:3px}
   .stat.ok .n{color:var(--ok)} .stat.warn .n{color:var(--warn)} .stat.bad .n{color:var(--bad)}
   .stat.warn{background:var(--warn-soft);border-color:#f0dda6}
   .stat.bad{background:var(--bad-soft);border-color:#f3c2c0}
@@ -79,32 +79,32 @@
   .steps .dt{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
 
   .cal{width:100%;border-collapse:collapse;table-layout:fixed}
-  .cal th{font-size:12px;color:var(--muted);font-weight:700;padding:0 0 8px;text-align:center}
-  .cal td{border:1px solid var(--line);vertical-align:top;height:104px;padding:6px;background:#fff}
+  .cal th{font-size:13.5px;color:var(--muted);font-weight:700;padding:0 0 8px;text-align:center}
+  .cal td{border:1px solid var(--line);vertical-align:top;height:118px;padding:8px;background:#fff}
   .cal td.empty{background:#fafbfc;border-style:dashed}
   .cal td.holiday{background:#f2f3f5}
   .cal td.holiday .d{color:#9aa1a9}
   .cal td.check{background:#fffdf5;box-shadow:inset 3px 0 0 var(--warn)}
   /* 학사일정 */
-  .evs{margin-top:5px;display:flex;flex-direction:column;gap:2px}
-  .ev{font-size:10px;line-height:1.35;color:#41464c;display:flex;gap:3px;align-items:flex-start}
+  .evs{margin-top:6px;display:flex;flex-direction:column;gap:3px}
+  .ev{font-size:12px;line-height:1.4;color:#3a3f45;display:flex;gap:4px;align-items:flex-start}
   .ev .ic{flex:none}
-  .ev .tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ev .tx{word-break:keep-all}
   .ev.hol{color:#8c1d1b;font-weight:700}
-  .ev.tt{color:var(--warn);font-weight:700}
-  .evmore{font-size:9.5px;color:var(--muted)}
-  .cal .d{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px}
+  .ev.tt{color:#8a5a00;font-weight:700}
+  .evmore{font-size:11px;color:var(--muted)}
+  .cal .d{font-size:14px;font-weight:700;color:var(--muted);margin-bottom:6px}
   .cal td.today{outline:2px solid var(--brand);outline-offset:-2px}
   .cal td.today .d{color:var(--brand)}
-  .chip{display:inline-block;font-size:10.5px;padding:3px 7px;border-radius:999px;background:#eef0f3;color:#41464c;
+  .chip{display:inline-block;font-size:12.5px;padding:4px 9px;border-radius:999px;background:#eef0f3;color:#41464c;
     max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border:1px solid transparent}
   .chip:hover{border-color:var(--brand);color:var(--brand)}
   .chip.special{background:var(--brand-soft);color:var(--brand);font-weight:700}
   .chip.none{background:var(--warn-soft);color:var(--warn);font-weight:700}
   .chip.bad{background:var(--bad-soft);color:var(--bad);font-weight:700}
-  .meal{display:block;font-size:10px;color:var(--muted);margin-top:4px;overflow:hidden;
+  .meal{display:block;font-size:11.5px;color:var(--muted);margin-top:5px;overflow:hidden;
     text-overflow:ellipsis;white-space:nowrap}
-  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:var(--muted)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:12.5px;color:var(--muted)}
   .legend span{display:flex;align-items:center;gap:6px}
   .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
 
@@ -457,7 +457,7 @@ function renderCal(d){
 // 학사일정을 달력 칸에 표시한다. 판단은 사람이 하고, 화면은 놓치지 않게만 해준다.
 function renderEvents(events){
   if (!events || !events.length) return '';
-  var shown = events.slice(0, 3);
+  var shown = events.slice(0, 4);
   var html = '<div class="evs">' + shown.map(function(e){
     var cls = e.holiday ? 'hol' : (e.timetable ? 'tt' : '');
     var ic  = e.holiday ? '🚫' : (e.timetable ? '💡' : '·');
