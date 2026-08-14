@@ -112,6 +112,106 @@ function notionAddSeedOption(seedName, config) {
   return { ok: false, error: `노션 ${res.getResponseCode()}: ${res.getContentText().substring(0, 200)}` };
 }
 
+// ===== 학사일정 =====
+// 일정이 있는 날만 기록된 DB이므로 별도 판정 속성은 두지 않는다.
+// 제목으로 성격을 짐작하되, 자동으로 적용하지 않고 화면에 보여주기만 한다.
+const EVENTS_DB_ID_DEFAULT = 'd62cd340-3dc3-83ff-9bfb-018d61fd3c8f';
+
+// 수업이 없는 날로 보이는 일정 ('방학식'은 수업일이므로 제외)
+const RE_HOLIDAY = /(재량휴업|휴업일|대체\s*휴일|대체\s*공휴일|공휴일|추석|설\s*연휴|설날|한글날|개천절|광복절|삼일절|어린이날|현충일|성탄|신정)|방학(?!식)/;
+// 시간표가 평소와 달라질 만한 일정
+const RE_TIMETABLE = /(단축|교시|동아리|임시\s*시간표|시간표|금요일|고사|시험|행사|축제|솔밭제|체육대회|발표회|훈련|개학식|졸업식|수학여행|체험학습)/;
+
+function eventsDbId() {
+  return PropertiesService.getScriptProperties().getProperty('EVENTS_DB_ID') || EVENTS_DB_ID_DEFAULT;
+}
+
+// 그 달에 "걸치는" 일정을 모두 가져와 날짜별로 펼친다.
+// 여름방학(7/16~8/16)처럼 이전 달에 시작한 일정을 놓치지 않으려면
+// 시작일 기준으로 거르면 안 된다.
+function getSchoolEventsByDate(yearMonth, config) {
+  const year = parseInt(yearMonth.substring(0, 4), 10);
+  const month = parseInt(yearMonth.substring(4, 6), 10) - 1;
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month + 1, 0);
+  const fmt = d => Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+
+  // 넉넉히 앞쪽까지 가져온 뒤 코드에서 겹침을 판정한다 (긴 기간 일정 대비)
+  const lookBack = new Date(year, month - 4, 1);
+
+  const body = {
+    page_size: 100,
+    filter: {
+      and: [
+        { property: '날짜', date: { on_or_before: fmt(last) } },
+        { property: '날짜', date: { on_or_after: fmt(lookBack) } }
+      ]
+    }
+  };
+
+  const byDate = {};
+  let cursor = null, more = true, guard = 0;
+
+  while (more && guard++ < 10) {
+    if (cursor) body.start_cursor = cursor;
+    const res = UrlFetchApp.fetch(
+      `https://api.notion.com/v1/databases/${eventsDbId()}/query`,
+      {
+        method: 'post',
+        headers: {
+          'Authorization': `Bearer ${config.NOTION_TOKEN}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json'
+        },
+        payload: JSON.stringify(body),
+        muteHttpExceptions: true
+      }
+    );
+    if (res.getResponseCode() !== 200) {
+      Logger.log(`학사일정 조회 실패: ${res.getContentText().substring(0, 200)}`);
+      break;
+    }
+    const json = JSON.parse(res.getContentText());
+
+    (json.results || []).forEach(p => {
+      const d = p.properties['날짜'] && p.properties['날짜'].date;
+      if (!d || !d.start) return;
+      const title = (p.properties['일정이름'] && p.properties['일정이름'].title || [])
+        .map(t => t.plain_text).join('');
+      if (!title) return;
+
+      const start = d.start.substring(0, 10);
+      const end = (d.end || d.start).substring(0, 10);
+
+      // 이 달과 겹치는 구간만 펼친다
+      const from = start > fmt(first) ? start : fmt(first);
+      const to = end < fmt(last) ? end : fmt(last);
+      if (from > to) return;
+
+      const item = {
+        name: title,
+        holiday: RE_HOLIDAY.test(title),
+        timetable: RE_TIMETABLE.test(title),
+        span: (start !== end) ? (start + '~' + end) : ''
+      };
+
+      let cur = new Date(from + 'T00:00:00');
+      const stop = new Date(to + 'T00:00:00');
+      let loop = 0;
+      while (cur <= stop && loop++ < 40) {
+        const key = Utilities.formatDate(cur, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+        if (!byDate[key]) byDate[key] = [];
+        byDate[key].push(item);
+        cur = new Date(cur.getTime() + 86400000);
+      }
+    });
+
+    more = json.has_more;
+    cursor = json.next_cursor;
+  }
+  return byDate;
+}
+
 // ===== SEED 이름 정규화 =====
 // 파일명이자 주소의 일부가 되므로 영문 소문자·숫자·밑줄만 허용한다.
 function normalizeSeedName(raw) {
@@ -180,7 +280,8 @@ function api_getDashboard(yearMonth) {
   });
 
   const weekdays = getWeekdays(yearMonth);
-  let mealCount = 0, unassigned = 0, missingPages = 0;
+  const eventsByDate = getSchoolEventsByDate(yearMonth, config);
+  let mealCount = 0, unassigned = 0, missingPages = 0, checkDays = 0;
 
   weekdays.forEach(d => {
     const page = byDate[d];
@@ -189,13 +290,23 @@ function api_getDashboard(yearMonth) {
     // 페이지가 없는 날은 "미지정"이 아니다 — 대응 방법이 다르므로 따로 센다
     if (page && !seed) unassigned++;
     if (page && page.menu) mealCount++;
+
+    const events = eventsByDate[d] || [];
+    const isHoliday = events.some(e => e.holiday);
+    // 휴업일이 아니면서 시간표가 달라질 만한 일정이 있는 날 = 확인이 필요한 날
+    const needsCheck = !isHoliday && events.some(e => e.timetable);
+    if (needsCheck) checkDays++;
+
     result.days.push({
       date: d,
       dow: new Date(d).getDay(),
       exists: !!page,
       seed: seed,
       hasMenu: !!(page && page.menu),
-      missingImage: !!seed && repoSeeds.indexOf(seed) === -1
+      missingImage: !!seed && repoSeeds.indexOf(seed) === -1,
+      events: events,
+      holiday: isHoliday,
+      needsCheck: needsCheck
     });
   });
 
@@ -210,6 +321,7 @@ function api_getDashboard(yearMonth) {
     missingPages: missingPages,
     meals: mealCount,
     unassigned: unassigned,
+    checkDays: checkDays,
     seedCount: repoSeeds.length,
     warningCount: result.warnings.length
   };

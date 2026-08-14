@@ -80,8 +80,19 @@
 
   .cal{width:100%;border-collapse:collapse;table-layout:fixed}
   .cal th{font-size:12px;color:var(--muted);font-weight:700;padding:0 0 8px;text-align:center}
-  .cal td{border:1px solid var(--line);vertical-align:top;height:80px;padding:6px;background:#fff}
+  .cal td{border:1px solid var(--line);vertical-align:top;height:104px;padding:6px;background:#fff}
   .cal td.empty{background:#fafbfc;border-style:dashed}
+  .cal td.holiday{background:#f2f3f5}
+  .cal td.holiday .d{color:#9aa1a9}
+  .cal td.check{background:#fffdf5;box-shadow:inset 3px 0 0 var(--warn)}
+  /* 학사일정 */
+  .evs{margin-top:5px;display:flex;flex-direction:column;gap:2px}
+  .ev{font-size:10px;line-height:1.35;color:#41464c;display:flex;gap:3px;align-items:flex-start}
+  .ev .ic{flex:none}
+  .ev .tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ev.hol{color:#8c1d1b;font-weight:700}
+  .ev.tt{color:var(--warn);font-weight:700}
+  .evmore{font-size:9.5px;color:var(--muted)}
   .cal .d{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px}
   .cal td.today{outline:2px solid var(--brand);outline-offset:-2px}
   .cal td.today .d{color:var(--brand)}
@@ -202,6 +213,8 @@
       <span><i class="sw" style="background:#d2e3fc"></i> 수동 지정 (특수 일정)</span>
       <span><i class="sw" style="background:#fef7e0"></i> 미지정</span>
       <span><i class="sw" style="background:#fce8e6"></i> 이미지 없음 — 깨진 이미지가 들어갑니다</span>
+      <span>🚫 휴업일로 보임</span>
+      <span>💡 시간표가 달라질 수 있는 일정 — 확인하세요</span>
     </div>
   </section>
 
@@ -266,6 +279,7 @@
 <!-- SEED 선택 -->
 <dialog id="pick"><div class="dlg">
   <h3 id="pickTitle">시간표 지정</h3>
+  <div id="pickEvents"></div>
   <p>고르면 노션 속성과 이미지가 함께 바뀝니다.</p>
   <select id="pickSel" style="width:100%"></select>
   <div class="row">
@@ -379,6 +393,7 @@ function render(d){
     stat(s.pages + '/' + s.weekdays, '노션 페이지 (평일)', s.missingPages ? 'warn' : 'ok'),
     stat(s.meals + '/' + s.pages, '급식 입력 완료', (s.pages && s.meals >= s.pages) ? 'ok' : 'warn'),
     stat(s.unassigned, '시간표 미지정 (페이지 있는 날)', s.unassigned ? 'warn' : 'ok'),
+    stat(s.checkDays, '시간표 확인 필요 (학사일정 있음)', s.checkDays ? 'warn' : 'ok'),
     stat(s.warningCount, '확인 필요', s.warningCount ? 'bad' : 'ok'),
     stat(s.seedCount, '등록된 시간표', '')
   ].join('');
@@ -418,19 +433,41 @@ function renderCal(d){
     else if (day.missingImage){ cls += ' bad'; txt = day.seed + ' ⚠'; }
     else if (day.seed !== '1_45m_6p' && day.seed !== '2_45m_7p') cls += ' special';
 
-    html += '<td class="' + (day.date === todayStr ? 'today' : '') + '">'
+    var tdCls = [];
+    if (day.date === todayStr) tdCls.push('today');
+    if (day.holiday) tdCls.push('holiday');
+    else if (day.needsCheck) tdCls.push('check');
+
+    html += '<td class="' + tdCls.join(' ') + '">'
       + '<div class="d">' + parseInt(day.date.substring(8),10)
       + (day.date === todayStr ? ' · 오늘' : '') + '</div>'
       + (day.exists
           ? '<span class="' + cls + '" onclick="openPick(\'' + day.date + '\')">' + esc(txt) + '</span>'
             + (day.hasMenu ? '<span class="meal">🍚 급식 있음</span>' : '')
           : '<span class="chip none">페이지 없음</span>')
+      + renderEvents(day.events)
       + '</td>';
     col++;
   });
   while (col > 0 && col < 5){ html += '<td class="empty"></td>'; col++; }
   html += '</tr></table>';
   document.getElementById('cal').innerHTML = html;
+}
+
+// 학사일정을 달력 칸에 표시한다. 판단은 사람이 하고, 화면은 놓치지 않게만 해준다.
+function renderEvents(events){
+  if (!events || !events.length) return '';
+  var shown = events.slice(0, 3);
+  var html = '<div class="evs">' + shown.map(function(e){
+    var cls = e.holiday ? 'hol' : (e.timetable ? 'tt' : '');
+    var ic  = e.holiday ? '🚫' : (e.timetable ? '💡' : '·');
+    return '<span class="ev ' + cls + '" title="' + esc(e.name + (e.span ? ' (' + e.span + ')' : '')) + '">'
+      + '<span class="ic">' + ic + '</span><span class="tx">' + esc(e.name) + '</span></span>';
+  }).join('');
+  if (events.length > shown.length){
+    html += '<span class="evmore">외 ' + (events.length - shown.length) + '건</span>';
+  }
+  return html + '</div>';
 }
 
 function renderSeeds(d){
@@ -577,6 +614,21 @@ function openPick(date){
   PICK_DATE = date;
   var day = DATA.days.filter(function(d){ return d.date === date; })[0];
   document.getElementById('pickTitle').textContent = date + ' (' + DOW[day.dow] + ') 시간표 지정';
+
+  // 고를 때 근거가 같이 보이도록 그날 학사일정을 함께 띄운다
+  var ev = document.getElementById('pickEvents');
+  if (day.events && day.events.length){
+    ev.innerHTML = '<div class="note" style="margin:0 0 12px">'
+      + '<b>이날의 학사일정</b><br>'
+      + day.events.map(function(e){
+          return (e.holiday ? '🚫 ' : (e.timetable ? '💡 ' : '· '))
+            + esc(e.name) + (e.span ? ' <span style="color:#8a7a55">(' + esc(e.span) + ')</span>' : '');
+        }).join('<br>')
+      + '</div>';
+  } else {
+    ev.innerHTML = '<p style="margin:0 0 12px;color:var(--muted);font-size:12px">이날은 등록된 학사일정이 없습니다.</p>';
+  }
+
   var sel = document.getElementById('pickSel');
   sel.innerHTML = '<option value="">— 지정 안 함 —</option>' + DATA.seeds.map(function(s){
     return '<option value="' + esc(s.name) + '"' + (day.seed === s.name ? ' selected' : '') + '>'
