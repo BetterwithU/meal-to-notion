@@ -136,7 +136,8 @@ function api_getDashboard(yearMonth) {
     hasGithubToken: !!PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN'),
     days: [],
     seeds: [],
-    warnings: []
+    warnings: [],  // 실제 위험 — 빨갛게
+    notes: []      // 알아만 두면 되는 것 — 조용하게
   };
 
   // 저장소 시간표 목록
@@ -155,10 +156,21 @@ function api_getDashboard(yearMonth) {
     inNotion: optionNames.indexOf(s) !== -1
   }));
 
-  // 노션에는 있는데 이미지가 없는 값 = 깨진 이미지가 들어갈 위험
+  // 이번 달 노션 페이지
+  const pages = getNotionPagesMapFull(yearMonth, config.TIMETABLE_PROP_NAME || 'SEED', config);
+  const byDate = {};
+  pages.forEach(p => { if (p.date) byDate[p.date] = p; });
+  const usedSeeds = pages.map(p => p.timetableValue).filter(v => !!v);
+
+  // 이미지가 없는 선택지 — 실제로 쓰는 날이 있을 때만 위험하다.
+  // 비어 있는 자리를 매번 빨갛게 띄우면 경고 자체를 무시하게 된다.
   optionNames.forEach(n => {
-    if (repoSeeds.indexOf(n) === -1) {
-      result.warnings.push(`${n} — 노션 선택지에는 있으나 저장소에 이미지가 없습니다. 이 값을 쓰면 깨진 이미지가 들어갑니다.`);
+    if (repoSeeds.indexOf(n) !== -1) return;
+    const usedOn = pages.filter(p => p.timetableValue === n).map(p => p.date);
+    if (usedOn.length) {
+      result.warnings.push(`${n} — ${usedOn.join(', ')}에 지정돼 있으나 저장소에 이미지가 없습니다. 깨진 이미지가 들어갑니다.`);
+    } else {
+      result.notes.push(`${n} — 이미지가 아직 없는 빈 자리입니다. 이번 달에 쓰는 날은 없습니다.`);
     }
   });
   result.seeds.forEach(s => {
@@ -166,11 +178,6 @@ function api_getDashboard(yearMonth) {
       result.warnings.push(`${s.name} — 이미지는 있으나 노션 선택지에 없습니다. 날짜에 지정할 수 없습니다.`);
     }
   });
-
-  // 이번 달 노션 페이지
-  const pages = getNotionPagesMapFull(yearMonth, config.TIMETABLE_PROP_NAME || 'SEED', config);
-  const byDate = {};
-  pages.forEach(p => { if (p.date) byDate[p.date] = p; });
 
   const weekdays = getWeekdays(yearMonth);
   let mealCount = 0, unassigned = 0, missingPages = 0;

@@ -287,10 +287,16 @@ function render(d){
     stat(s.seedCount, '등록된 시간표', '')
   ].join('');
 
-  document.getElementById('warnings').innerHTML = d.warnings.length
-    ? '<div class="note bad"><b>⚠ 확인이 필요합니다</b><br>· ' +
-      d.warnings.map(esc).join('<br>· ') + '</div>'
-    : '';
+  var html = '';
+  if (d.warnings.length){
+    html += '<div class="note bad"><b>⚠ 확인이 필요합니다</b><br>· '
+      + d.warnings.map(esc).join('<br>· ') + '</div>';
+  }
+  if (d.notes && d.notes.length){
+    html += '<div class="note" style="background:#f4f5f7;border-color:var(--line);color:var(--muted)">· '
+      + d.notes.map(esc).join('<br>· ') + '</div>';
+  }
+  document.getElementById('warnings').innerHTML = html;
 
   renderCal(d);
   renderSeeds(d);
