@@ -498,10 +498,12 @@ function getNotionPagesMapFull(yearMonth, timetableProp, config) {
       (res.results || []).forEach(p => {
         const dateStart = p.properties["날짜"]?.date?.start;
         const timetableSelect = p.properties[timetableProp]?.select;
+        const menuRich = p.properties["메뉴"]?.rich_text;
         pages.push({
           id: p.id,
           date: dateStart,
-          timetableValue: timetableSelect ? timetableSelect.name : null
+          timetableValue: timetableSelect ? timetableSelect.name : null,
+          menu: (menuRich && menuRich.length) ? menuRich[0].plain_text : ''
         });
       });
       hasMore = res.has_more;

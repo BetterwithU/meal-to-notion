@@ -173,52 +173,40 @@ function api_getDashboard(yearMonth) {
   pages.forEach(p => { if (p.date) byDate[p.date] = p; });
 
   const weekdays = getWeekdays(yearMonth);
-  let mealCount = 0, unassigned = 0;
-
-  // 급식 입력 여부는 시트에서 확인 (노션 재조회보다 빠름)
-  const menuByDate = readMenusFromSheet(yearMonth, config);
+  let mealCount = 0, unassigned = 0, missingPages = 0;
 
   weekdays.forEach(d => {
     const page = byDate[d];
+    if (!page) missingPages++;
     const seed = page ? page.timetableValue : null;
-    if (!seed) unassigned++;
-    if (menuByDate[d]) mealCount++;
+    // 페이지가 없는 날은 "미지정"이 아니다 — 대응 방법이 다르므로 따로 센다
+    if (page && !seed) unassigned++;
+    if (page && page.menu) mealCount++;
     result.days.push({
       date: d,
       dow: new Date(d).getDay(),
       exists: !!page,
       seed: seed,
+      hasMenu: !!(page && page.menu),
       missingImage: !!seed && repoSeeds.indexOf(seed) === -1
     });
   });
 
+  const pageCount = weekdays.length - missingPages;
+  if (missingPages > 0) {
+    result.warnings.push(`평일 ${weekdays.length}일 중 ${missingPages}일은 노션 페이지가 없습니다. [1. 날짜 페이지 생성]을 실행하세요.`);
+  }
+
   result.stats = {
     weekdays: weekdays.length,
-    pages: weekdays.filter(d => byDate[d]).length,
+    pages: pageCount,
+    missingPages: missingPages,
     meals: mealCount,
     unassigned: unassigned,
     seedCount: repoSeeds.length,
     warningCount: result.warnings.length
   };
   return result;
-}
-
-function readMenusFromSheet(yearMonth, config) {
-  const map = {};
-  try {
-    const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(yearMonth);
-    if (!sheet) return map;
-    sheet.getDataRange().getValues().slice(1).forEach(row => {
-      const d = row[0];
-      const ds = (d instanceof Date)
-        ? Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd')
-        : String(d).substring(0, 10);
-      if (ds.length === 10 && row[1]) map[ds] = String(row[1]);
-    });
-  } catch (e) {
-    Logger.log(`readMenusFromSheet 오류: ${e}`);
-  }
-  return map;
 }
 
 // ===== SHOOT: 등록부터 적용까지 =====

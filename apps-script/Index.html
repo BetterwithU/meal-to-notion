@@ -280,9 +280,9 @@ function render(d){
 
   var s = d.stats;
   document.getElementById('stats').innerHTML = [
-    stat(s.pages + '/' + s.weekdays, '노션 페이지 (평일)', s.pages >= s.weekdays ? 'ok' : 'warn'),
-    stat(s.meals, '급식 입력 완료', s.meals >= s.pages && s.pages > 0 ? 'ok' : 'warn'),
-    stat(s.unassigned, '시간표 미지정', s.unassigned ? 'warn' : 'ok'),
+    stat(s.pages + '/' + s.weekdays, '노션 페이지 (평일)', s.missingPages ? 'warn' : 'ok'),
+    stat(s.meals + '/' + s.pages, '급식 입력 완료', (s.pages && s.meals >= s.pages) ? 'ok' : 'warn'),
+    stat(s.unassigned, '시간표 미지정 (페이지 있는 날)', s.unassigned ? 'warn' : 'ok'),
     stat(s.warningCount, '확인 필요', s.warningCount ? 'bad' : 'ok'),
     stat(s.seedCount, '등록된 시간표', '')
   ].join('');
