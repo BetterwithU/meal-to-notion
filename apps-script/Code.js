@@ -664,7 +664,7 @@ function writeManualSheet() {
   r = writeTableRow(sheet, r, ['9_exam_2p', '시험 × 2교시']);
   r = writeTableRow(sheet, r, ['10_40m_4p_club', '40분 × 4교시 + 동아리']);
   r = writeTableRow(sheet, r, ['11_45p_34club', '개학날(34교시 동아리)']);
-  r = writeTableRow(sheet, r, ['12_40m_7p_training', '40분 × 7교시 (연수)']);
+  r = writeTableRow(sheet, r, ['12_40m_7p_training', '40분 × 7교시 (민방위훈련)']);
 
   SpreadsheetApp.flush();
   Logger.log('사용설명서 작성 완료');
