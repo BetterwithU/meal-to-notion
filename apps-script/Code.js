@@ -15,7 +15,19 @@ function onOpen() {
     .addItem('전체 실행 (1→2→3)', 'manualFullUpdate')
     .addSeparator()
     .addItem('사용설명서 새로고침', 'writeManualSheet')
+    .addItem('대시보드 주소 보기', 'showDashboardUrl')
     .addToUi();
+}
+
+// 웹앱 주소를 알려준다 (즐겨찾기 해두면 스프레드시트를 열 일이 없다)
+function showDashboardUrl() {
+  const url = ScriptApp.getService().getUrl();
+  const ui = SpreadsheetApp.getUi();
+  if (!url) {
+    ui.alert('아직 웹앱으로 배포되지 않았습니다.');
+    return;
+  }
+  ui.alert('대시보드 주소', url + '\n\n브라우저 즐겨찾기에 추가해 두세요.', ui.ButtonSet.OK);
 }
 
 // ===== 설정 =====
@@ -38,23 +50,73 @@ function getConfig() {
   return PropertiesService.getScriptProperties().getProperties();
 }
 
-// ===== 이미지 URL 매핑 =====
-const TIMETABLE_IMAGES = {
-  '1_45m_6p':      'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/1_45m_6p.png',
-  '2_45m_7p':      'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/2_45m_7p.png',
-  '3_45m_4p_club': 'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/3_45m_4p_club.png',
-  '4_40m_6p':      'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/4_40m_6p.png',
-  '5_40m_7p':      'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/5_40m_7p.png',
-  '6_35m_6p':      'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/6_35m_6p.png',
-  '7_35m_7p':      'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/7_35m_7p.png',
-  '8_exam_3p':     'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/8_exam_3p.png',
-  '9_exam_2p':     'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/9_exam_2p.png',
-  '10_40m_4p_club':'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/10_40m_4p_club.png',
-  '11_45p_34club': 'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/11_45p_34club.png',
-  '12_40m_7p_training': 'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/12_40m_7p_training.png'
-};
+// ===== 시간표 저장소 =====
+// 매핑표를 코드에 두지 않는다. 저장소의 timetable/ 폴더가 곧 시간표 목록이고,
+// 설명 문구는 timetable/descriptions.json 한 곳에만 있다.
+// → 13번, 14번이 생겨도 이 파일은 고칠 필요가 없다.
+const GH_OWNER_REPO = 'BetterwithU/meal-to-notion';
+const GH_BRANCH = 'main';
+const TIMETABLE_DIR = 'timetable';
 
 const API_DELAY = 150; // Notion rate limit: 3req/s, 150ms면 안전
+
+// SEED 값 → 이미지 URL (규칙으로 도출, 매핑표 불필요)
+function imageUrlForSeed(seed) {
+  return `https://cdn.jsdelivr.net/gh/${GH_OWNER_REPO}@${GH_BRANCH}/${TIMETABLE_DIR}/${encodeURIComponent(seed)}.png`;
+}
+
+// 저장소에 실제로 존재하는 시간표 목록 (실행 중 1회만 조회)
+let _seedCache = null;
+function listTimetableSeeds() {
+  if (_seedCache) return _seedCache;
+
+  const names = [];
+  try {
+    const res = UrlFetchApp.fetch(
+      `https://api.github.com/repos/${GH_OWNER_REPO}/contents/${TIMETABLE_DIR}?ref=${GH_BRANCH}`,
+      { headers: githubHeaders(), muteHttpExceptions: true }
+    );
+    if (res.getResponseCode() === 200) {
+      JSON.parse(res.getContentText()).forEach(f => {
+        if (f.type === 'file' && /\.png$/i.test(f.name)) {
+          names.push(f.name.replace(/\.png$/i, ''));
+        }
+      });
+    } else {
+      Logger.log(`listTimetableSeeds 실패: ${res.getResponseCode()} ${res.getContentText()}`);
+    }
+  } catch (e) {
+    Logger.log(`listTimetableSeeds 오류: ${e}`);
+  }
+
+  _seedCache = { names: names, desc: fetchSeedDescriptions() };
+  return _seedCache;
+}
+
+// 설명 문구 조회 (없으면 빈 객체 — 설명이 없어도 동작에는 지장 없음)
+function fetchSeedDescriptions() {
+  try {
+    const res = UrlFetchApp.fetch(
+      `https://cdn.jsdelivr.net/gh/${GH_OWNER_REPO}@${GH_BRANCH}/${TIMETABLE_DIR}/descriptions.json`,
+      { muteHttpExceptions: true }
+    );
+    if (res.getResponseCode() === 200) return JSON.parse(res.getContentText());
+  } catch (e) {
+    Logger.log(`fetchSeedDescriptions 오류: ${e}`);
+  }
+  return {};
+}
+
+// 숫자 접두사(1_, 12_) 기준 정렬 — 없으면 이름순
+function sortSeeds(names) {
+  return names.slice().sort((a, b) => {
+    const na = parseInt(a, 10), nb = parseInt(b, 10);
+    if (!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb;
+    if (!isNaN(na) && isNaN(nb)) return -1;
+    if (isNaN(na) && !isNaN(nb)) return 1;
+    return a.localeCompare(b);
+  });
+}
 
 // ===== 로그 기록 =====
 function writeLog(step, date, result, detail) {
@@ -300,6 +362,7 @@ function updateTimetableImages(yearMonth, config) {
   config = config || getConfig();
   const timetableProp = config.TIMETABLE_PROP_NAME || '시간표';
   const pagesWithTimetable = getNotionPagesMapFull(yearMonth, timetableProp, config);
+  const knownSeeds = listTimetableSeeds().names;
   let inserted = 0;
 
   for (const page of pagesWithTimetable) {
@@ -308,11 +371,12 @@ function updateTimetableImages(yearMonth, config) {
       continue;
     }
 
-    const imageUrl = TIMETABLE_IMAGES[page.timetableValue];
-    if (!imageUrl) {
-      writeLog('3단계', page.date || page.id, false, `알 수 없는 SEED값: ${page.timetableValue}`);
+    if (knownSeeds.indexOf(page.timetableValue) === -1) {
+      writeLog('3단계', page.date || page.id, false,
+        `저장소에 이미지가 없는 SEED값: ${page.timetableValue}.png`);
       continue;
     }
+    const imageUrl = imageUrlForSeed(page.timetableValue);
 
     // 기존 이미지 블록 확인
     const existingBlocks = getPageBlocks(page.id, config);
@@ -648,23 +712,24 @@ function writeManualSheet() {
   // --- SEED 매핑 ---
   r = writeSection(sheet, r, 'SEED 값 → 시간표 매핑', secBg);
   r = writeTableHeader(sheet, r, ['SEED 값 (노션 선택항목)', '시간표 형태'], hdrBg, hdrFont);
-  // 기본값 행: 초록 배경 + 굵게
-  sheet.getRange(r, 1).setValue('1_45m_6p').setFontWeight('bold').setFontSize(10).setBackground('#d9ead3');
-  sheet.getRange(r, 2).setValue('45분 × 6교시  ←  월·수·금 기본값').setFontSize(10).setBackground('#d9ead3').setFontWeight('bold');
-  r++;
-  sheet.getRange(r, 1).setValue('2_45m_7p').setFontWeight('bold').setFontSize(10).setBackground('#d9ead3');
-  sheet.getRange(r, 2).setValue('45분 × 7교시  ←  화·목 기본값').setFontSize(10).setBackground('#d9ead3').setFontWeight('bold');
-  r++;
-  r = writeTableRow(sheet, r, ['3_45m_4p_club', '45분 × 4교시 + 동아리']);
-  r = writeTableRow(sheet, r, ['4_40m_6p', '40분 × 6교시']);
-  r = writeTableRow(sheet, r, ['5_40m_7p', '40분 × 7교시']);
-  r = writeTableRow(sheet, r, ['6_35m_6p', '35분 × 6교시']);
-  r = writeTableRow(sheet, r, ['7_35m_7p', '35분 × 7교시']);
-  r = writeTableRow(sheet, r, ['8_exam_3p', '시험 × 3교시']);
-  r = writeTableRow(sheet, r, ['9_exam_2p', '시험 × 2교시']);
-  r = writeTableRow(sheet, r, ['10_40m_4p_club', '40분 × 4교시 + 동아리']);
-  r = writeTableRow(sheet, r, ['11_45p_34club', '개학날(34교시 동아리)']);
-  r = writeTableRow(sheet, r, ['12_40m_7p_training', '40분 × 7교시 (민방위훈련)']);
+  // 저장소의 실제 이미지 목록에서 생성 — 코드에 시간표를 나열하지 않는다
+  const registry = listTimetableSeeds();
+  const seeds = sortSeeds(registry.names);
+  if (seeds.length === 0) {
+    r = writeTableRow(sheet, r, ['(조회 실패)', '깃허브에서 시간표 목록을 가져오지 못했습니다. 잠시 후 다시 실행하세요.']);
+  }
+  seeds.forEach(seed => {
+    const desc = registry.desc[seed] || '(설명 없음)';
+    const isDefault = (seed === '1_45m_6p' || seed === '2_45m_7p');
+    if (isDefault) {
+      // 요일 기본값 행: 초록 배경 + 굵게
+      sheet.getRange(r, 1).setValue(seed).setFontWeight('bold').setFontSize(10).setBackground('#d9ead3');
+      sheet.getRange(r, 2).setValue(desc).setFontSize(10).setBackground('#d9ead3').setFontWeight('bold');
+      r++;
+    } else {
+      r = writeTableRow(sheet, r, [seed, desc]);
+    }
+  });
 
   SpreadsheetApp.flush();
   Logger.log('사용설명서 작성 완료');

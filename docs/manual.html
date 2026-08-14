@@ -98,21 +98,56 @@
 </p>
 
 <h2>시간표 이미지 매핑 (SEED 속성)</h2>
-<table>
-  <tr><th>SEED 값</th><th>기본 요일</th><th>수업 형태</th><th>이미지 파일</th></tr>
-  <tr><td>1_45m_6p</td><td>월, 수, 금</td><td>45분 × 6교시</td><td>1_45m_6p.png</td></tr>
-  <tr><td>2_45m_7p</td><td>화, 목</td><td>45분 × 7교시</td><td>2_45m_7p.png</td></tr>
-  <tr><td>3_45m_4p_club</td><td>수동 지정</td><td>45분 × 4교시 + 동아리</td><td>3_45m_4p_club.png</td></tr>
-  <tr><td>4_40m_6p</td><td>수동 지정</td><td>40분 × 6교시</td><td>4_40m_6p.png</td></tr>
-  <tr><td>5_40m_7p</td><td>수동 지정</td><td>40분 × 7교시</td><td>5_40m_7p.png</td></tr>
-  <tr><td>6_35m_6p</td><td>수동 지정</td><td>35분 × 6교시</td><td>6_35m_6p.png</td></tr>
-  <tr><td>7_35m_7p</td><td>수동 지정</td><td>35분 × 7교시</td><td>7_35m_7p.png</td></tr>
-  <tr><td>8_exam_3p</td><td>수동 지정</td><td>시험 × 3교시 (이미지 준비 중)</td><td>8_exam_3p.png</td></tr>
-  <tr><td>9_exam_2p</td><td>수동 지정</td><td>시험 × 2교시</td><td>9_exam_2p.png</td></tr>
-  <tr><td>10_40m_4p_club</td><td>수동 지정</td><td>40분 × 4교시 + 동아리</td><td>10_40m_4p_club.png</td></tr>
-  <tr><td>11_45p_34club</td><td>수동 지정</td><td>개학날(34교시 동아리)</td><td>11_45p_34club.png</td></tr>
-  <tr><td>12_40m_7p_training</td><td>수동 지정</td><td>40분 × 7교시 (민방위훈련)</td><td>12_40m_7p_training.png</td></tr>
+<p style="font-size:12px; color:#777;">
+  아래 표는 저장소의 <code>timetable/</code> 폴더를 읽어 <b>자동으로 만들어집니다</b>.
+  시간표를 추가해도 이 문서를 고칠 필요가 없습니다.
+</p>
+<table id="seedTable">
+  <tr><th>SEED 값</th><th>기본 요일</th><th>수업 형태</th><th>이미지</th></tr>
+  <tr><td colspan="4" style="color:#777">불러오는 중…</td></tr>
 </table>
+<script>
+(function () {
+  var BASE = 'https://cdn.jsdelivr.net/gh/BetterwithU/meal-to-notion@main/timetable/';
+  var DEFAULTS = { '1_45m_6p': '월, 수, 금', '2_45m_7p': '화, 목' };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  // 1_, 12_ 같은 숫자 접두사 기준 정렬
+  function bySeq(a, b) {
+    var na = parseInt(a, 10), nb = parseInt(b, 10);
+    if (!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb;
+    return a.localeCompare(b);
+  }
+
+  fetch(BASE + 'descriptions.json', { cache: 'no-cache' })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (map) {
+      var rows = Object.keys(map).sort(bySeq).map(function (seed) {
+        return '<tr>'
+          + '<td><code>' + esc(seed) + '</code></td>'
+          + '<td>' + esc(DEFAULTS[seed] || '수동 지정') + '</td>'
+          + '<td>' + esc(map[seed]) + '</td>'
+          + '<td><img src="' + BASE + encodeURIComponent(seed) + '.png" alt="" '
+          + 'style="height:34px;border:1px solid #ddd;border-radius:3px;vertical-align:middle" '
+          + 'onerror="this.replaceWith(Object.assign(document.createElement(\'span\'),'
+          + '{textContent:\'이미지 없음\',style:\'color:#c5221f;font-weight:bold\'}))"></td>'
+          + '</tr>';
+      });
+      document.getElementById('seedTable').innerHTML =
+        '<tr><th>SEED 값</th><th>기본 요일</th><th>수업 형태</th><th>이미지</th></tr>' + rows.join('');
+    })
+    .catch(function (e) {
+      document.getElementById('seedTable').innerHTML =
+        '<tr><th>SEED 값</th></tr><tr><td style="color:#c5221f">'
+        + '목록을 불러오지 못했습니다 (' + esc(e.message) + '). '
+        + '저장소의 timetable/ 폴더를 직접 확인하세요.</td></tr>';
+    });
+})();
+</script>
 <p style="font-size:12px; color:#777;">이미지 저장소: GitHub <code>BetterwithU/meal-to-notion/timetable/</code></p>
 
 <h2>주의 사항</h2>

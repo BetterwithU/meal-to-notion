@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+  :root{
+    --bg:#f5f6f8; --panel:#fff; --ink:#1b1d21; --muted:#6b7280; --line:#e3e6ea;
+    --brand:#1a73e8; --brand-soft:#e8f0fe;
+    --ok:#137333; --ok-soft:#e6f4ea;
+    --warn:#b06000; --warn-soft:#fef7e0;
+    --bad:#c5221f; --bad-soft:#fce8e6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Malgun Gothic","맑은 고딕",-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.55}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 20px 60px}
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:14px}
+  h1{font-size:21px;margin:0;font-weight:700}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+  .panel h2{font-size:15px;margin:0 0 3px;font-weight:700}
+  .panel .hint{color:var(--muted);font-size:12.5px;margin:0 0 14px}
+  .bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  select,input[type=text],input[type=date]{font:inherit;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+  input[type=text]{width:100%}
+  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:#fff;padding:8px 14px;color:var(--ink)}
+  button:hover:not(:disabled){background:#f1f3f5}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  button.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
+  button.primary:hover:not(:disabled){filter:brightness(1.07)}
+  button.big{padding:12px 20px;font-size:15px;width:100%}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px}
+  .stat{border:1px solid var(--line);border-radius:10px;padding:13px 14px}
+  .stat .n{font-size:25px;font-weight:700;line-height:1.15}
+  .stat .l{color:var(--muted);font-size:12px;margin-top:2px}
+  .stat.ok .n{color:var(--ok)} .stat.warn .n{color:var(--warn)} .stat.bad .n{color:var(--bad)}
+  .stat.warn{background:var(--warn-soft);border-color:#f0dda6}
+  .stat.bad{background:var(--bad-soft);border-color:#f3c2c0}
+  .note{background:var(--warn-soft);border:1px solid #f0dda6;color:#6b4b00;border-radius:9px;padding:11px 13px;font-size:12.5px;margin-top:12px}
+  .note.bad{background:var(--bad-soft);border-color:#f3c2c0;color:#8c1d1b}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  @media(max-width:820px){.two{grid-template-columns:1fr}}
+  .drop{border:2px dashed #c3c8ce;border-radius:10px;background:#fafbfc;min-height:186px;
+    display:grid;place-items:center;text-align:center;color:var(--muted);padding:18px;cursor:pointer}
+  .drop:hover,.drop.over{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
+  .drop .ic{font-size:30px;display:block;margin-bottom:6px}
+  .drop small{display:block;margin-top:6px;font-size:11.5px;color:#9aa1a9}
+  .drop img{max-width:100%;max-height:230px;border-radius:6px}
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:12.5px;font-weight:700;margin-bottom:5px}
+  .field .note2{font-size:11.5px;color:var(--muted);margin-top:5px}
+  .valid{font-size:11.5px;margin-top:5px;color:var(--ok)}
+  .valid.bad{color:var(--bad)}
+  .steps{list-style:none;margin:14px 0 0;padding:13px 15px;border:1px solid var(--line);border-radius:10px;background:#fafbfc}
+  .steps li{display:flex;gap:9px;align-items:flex-start;padding:4px 0;font-size:12.5px;color:var(--muted)}
+  .steps .dot{width:17px;height:17px;border-radius:50%;background:#e0e3e7;color:#fff;font-size:10.5px;
+    display:grid;place-items:center;flex:none;margin-top:1px}
+  .steps li.done{color:var(--ink)} .steps li.done .dot{background:var(--ok)}
+  .steps li.now{color:var(--brand);font-weight:700} .steps li.now .dot{background:var(--brand)}
+  .steps li.fail{color:var(--bad)} .steps li.fail .dot{background:var(--bad)}
+  .steps .dt{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
+  .cal{width:100%;border-collapse:collapse;table-layout:fixed}
+  .cal th{font-size:12px;color:var(--muted);font-weight:700;padding:0 0 8px;text-align:center}
+  .cal td{border:1px solid var(--line);vertical-align:top;height:80px;padding:6px;background:#fff}
+  .cal td.empty{background:#fafbfc;border-style:dashed}
+  .cal .d{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px}
+  .cal td.today{outline:2px solid var(--brand);outline-offset:-2px}
+  .cal td.today .d{color:var(--brand)}
+  .chip{display:inline-block;font-size:10.5px;padding:3px 7px;border-radius:999px;background:#eef0f3;color:#41464c;
+    max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border:1px solid transparent}
+  .chip:hover{border-color:var(--brand);color:var(--brand)}
+  .chip.special{background:var(--brand-soft);color:var(--brand);font-weight:700}
+  .chip.none{background:var(--warn-soft);color:var(--warn);font-weight:700}
+  .chip.bad{background:var(--bad-soft);color:var(--bad);font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:12px}
+  .card{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .card .thumb{height:88px;background:#eceff2;display:grid;place-items:center;overflow:hidden}
+  .card .thumb img{width:100%;height:100%;object-fit:cover}
+  .card .meta{padding:9px 11px}
+  .card .nm{font-size:11.5px;font-weight:700;word-break:break-all;line-height:1.35}
+  .card .ds{font-size:11px;color:var(--muted);margin-top:3px}
+  .tag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:999px;margin-top:7px;font-weight:700}
+  .tag.ok{background:var(--ok-soft);color:var(--ok)}
+  .tag.bad{background:var(--bad-soft);color:var(--bad)}
+  .acts{display:flex;gap:10px;flex-wrap:wrap}
+  .log{font-family:Consolas,monospace;font-size:11.5px;background:#22252a;color:#cdd3d9;border-radius:9px;
+    padding:12px 14px;margin-top:14px;max-height:170px;overflow:auto;display:none}
+  .log .t{color:#7f8790} .log .g{color:#7ee08a} .log .r{color:#ff9c96}
+  .skel{color:var(--muted);font-size:12.5px;padding:8px 0}
+  dialog{border:none;border-radius:12px;padding:0;max-width:440px;width:92%;box-shadow:0 12px 40px rgba(0,0,0,.28)}
+  dialog::backdrop{background:rgba(0,0,0,.35)}
+  .dlg{padding:20px 22px}
+  .dlg h3{margin:0 0 4px;font-size:16px}
+  .dlg p{margin:0 0 14px;color:var(--muted);font-size:12.5px}
+  .dlg .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div>
+    <h1>학사일정 관리 대시보드</h1>
+    <div class="sub">급식 · 시간표 · 그 밖의 돌발 일정을 한 곳에서</div>
+  </div>
+  <div class="sub" id="synced">불러오는 중…</div>
+</header>
+
+<div class="bar">
+  <select id="ym"></select>
+  <button onclick="loadDashboard()">새로고침</button>
+  <button onclick="openSettings()">설정</button>
+</div>
+
+<div id="tokenWarn" style="display:none" class="note bad">
+  <b>깃허브 토큰이 등록되지 않았습니다.</b> 이미지 업로드가 동작하지 않습니다.
+  오른쪽 위 <b>[설정]</b>에서 토큰을 넣어 주세요.
+</div>
+
+<!-- 상태판 -->
+<section class="panel">
+  <h2>이번 달 상태</h2>
+  <p class="hint">노션·깃허브·스프레드시트를 한 번에 확인합니다. 손볼 곳이 있으면 색으로 드러납니다.</p>
+  <div class="stats" id="stats"><div class="skel">불러오는 중…</div></div>
+  <div id="warnings"></div>
+</section>
+
+<!-- 새 시간표 등록 -->
+<section class="panel">
+  <h2>새 시간표 등록</h2>
+  <p class="hint">이미지를 올리고 이름만 정하면 나머지는 전부 자동입니다. 파일명은 신경 쓰지 않으셔도 됩니다.</p>
+  <div class="two">
+    <div>
+      <div class="drop" id="drop">
+        <div id="dropInner">
+          <span class="ic">⬆</span>
+          이미지를 여기로 끌어다 놓으세요
+          <small>또는 클릭해서 파일 선택 · PNG 권장</small>
+        </div>
+      </div>
+      <input type="file" id="file" accept="image/png,image/jpeg" style="display:none">
+      <ul class="steps" id="steps">
+        <li><span class="dot">1</span><span>이미지 검사</span></li>
+        <li><span class="dot">2</span><span>SEED 이름으로 파일명 변경 후 깃허브 업로드</span></li>
+        <li><span class="dot">3</span><span>설명 저장</span></li>
+        <li><span class="dot">4</span><span>CDN에서 실제로 열리는지 확인</span></li>
+        <li><span class="dot">5</span><span>노션 SEED 선택속성에 항목 추가</span></li>
+        <li><span class="dot">6</span><span>설명서 갱신</span></li>
+        <li><span class="dot">7</span><span>선택한 날짜에 이미지 삽입</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="field">
+        <label>SEED 이름 <span style="color:var(--muted);font-weight:400">— 노션 선택속성에 추가될 이름</span></label>
+        <input type="text" id="seedName" placeholder="13_40m_5p_sports" oninput="previewName()">
+        <div class="valid" id="nameHint">영문 소문자·숫자·밑줄만 씁니다. 다른 문자는 자동으로 바꿔 드립니다.</div>
+      </div>
+      <div class="field">
+        <label>설명 <span style="color:var(--muted);font-weight:400">— 설명서에 표시될 문구</span></label>
+        <input type="text" id="seedDesc" placeholder="40분 × 5교시 (체육대회)">
+      </div>
+      <div class="field">
+        <label>적용할 날짜 <span style="color:var(--muted);font-weight:400">— 비워두면 등록만 합니다</span></label>
+        <input type="date" id="applyDate">
+      </div>
+      <button class="primary big" id="shoot" onclick="shoot()">SHOOT — 등록부터 적용까지 한 번에</button>
+    </div>
+  </div>
+  <div class="log" id="log"></div>
+</section>
+
+<!-- 달력 -->
+<section class="panel">
+  <h2 id="calTitle">시간표 달력</h2>
+  <p class="hint">날짜의 이름표를 눌러 시간표를 바꿉니다. 바꾸면 그 자리에서 노션까지 반영됩니다.</p>
+  <div id="cal"><div class="skel">불러오는 중…</div></div>
+</section>
+
+<!-- 등록된 시간표 -->
+<section class="panel">
+  <h2 id="seedTitle">등록된 시간표</h2>
+  <p class="hint">저장소의 이미지와 노션 선택지가 일치하는지 자동으로 대조합니다.</p>
+  <div class="grid" id="seedGrid"><div class="skel">불러오는 중…</div></div>
+</section>
+
+<!-- 월간 작업 -->
+<section class="panel">
+  <h2>월간 작업</h2>
+  <p class="hint">스프레드시트 [급식관리] 메뉴에 있던 기능입니다. 이제 여기서 실행합니다.</p>
+  <div class="acts">
+    <button onclick="runStep(1)">1. 날짜 페이지 생성</button>
+    <button onclick="runStep(2)">2. 급식 메뉴 불러오기</button>
+    <button onclick="runStep(3)">3. 시간표 이미지 삽입</button>
+    <button onclick="runStep(9)">설명서 갱신</button>
+  </div>
+  <div class="note">
+    <b>1번은 주의가 필요합니다.</b> 실행하면 수동으로 지정한 시간표가 요일 기본값으로 초기화됩니다.
+    특수 일정을 지정해 두셨다면 실행 후 달력에서 다시 지정하세요.
+  </div>
+  <div class="log" id="log2"></div>
+</section>
+
+</div>
+
+<!-- SEED 선택 -->
+<dialog id="pick"><div class="dlg">
+  <h3 id="pickTitle">시간표 지정</h3>
+  <p>고르면 노션 속성과 이미지가 함께 바뀝니다.</p>
+  <select id="pickSel" style="width:100%"></select>
+  <div class="row">
+    <button onclick="document.getElementById('pick').close()">취소</button>
+    <button class="primary" onclick="applyPick()">적용</button>
+  </div>
+</div></dialog>
+
+<!-- 설정 -->
+<dialog id="settings"><div class="dlg">
+  <h3>설정</h3>
+  <p>토큰은 서버(스크립트 속성)에만 저장되며 브라우저로 내려오지 않습니다.</p>
+  <div class="field">
+    <label>깃허브 토큰</label>
+    <input type="text" id="ghToken" placeholder="ghp_… 또는 github_pat_…">
+    <div class="note2" id="ghCur"></div>
+  </div>
+  <div class="note2" id="setInfo"></div>
+  <div class="row">
+    <button onclick="document.getElementById('settings').close()">닫기</button>
+    <button class="primary" onclick="saveToken()">저장</button>
+  </div>
+</div></dialog>
+
+<script>
+var DATA = null, PENDING = null, PICK_DATE = null;
+var DOW = ['일','월','화','수','목','금','토'];
+
+// ---------- 유틸 ----------
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function normalize(v){
+  return String(v||'').trim().toLowerCase().replace(/\.png$/,'')
+    .replace(/[^a-z0-9_]+/g,'_').replace(/_{2,}/g,'_').replace(/^_+|_+$/g,'');
+}
+function logTo(id, msg, cls){
+  var el = document.getElementById(id);
+  el.style.display = 'block';
+  var t = new Date().toTimeString().substring(0,8);
+  el.innerHTML += '<div><span class="t">'+t+'</span> <span class="'+(cls||'')+'">'+esc(msg)+'</span></div>';
+  el.scrollTop = el.scrollHeight;
+}
+
+// ---------- 연월 선택 ----------
+(function initYm(){
+  var sel = document.getElementById('ym'), now = new Date();
+  for (var i = -2; i <= 3; i++){
+    var d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    var v = d.getFullYear() + ('0' + (d.getMonth()+1)).slice(-2);
+    var o = document.createElement('option');
+    o.value = v; o.textContent = d.getFullYear() + '년 ' + (d.getMonth()+1) + '월';
+    if (i === 0) o.selected = true;
+    sel.appendChild(o);
+  }
+  sel.onchange = loadDashboard;
+})();
+
+// ---------- 대시보드 ----------
+function loadDashboard(){
+  document.getElementById('synced').textContent = '불러오는 중…';
+  google.script.run.withSuccessHandler(render).withFailureHandler(function(e){
+    document.getElementById('synced').textContent = '불러오기 실패';
+    document.getElementById('stats').innerHTML =
+      '<div class="note bad">불러오지 못했습니다: ' + esc(e.message) + '</div>';
+  }).api_getDashboard(document.getElementById('ym').value);
+}
+
+function render(d){
+  DATA = d;
+  document.getElementById('synced').textContent = '마지막 동기화 ' + d.syncedAt;
+  document.getElementById('tokenWarn').style.display = d.hasGithubToken ? 'none' : 'block';
+
+  var s = d.stats;
+  document.getElementById('stats').innerHTML = [
+    stat(s.pages + '/' + s.weekdays, '노션 페이지 (평일)', s.pages >= s.weekdays ? 'ok' : 'warn'),
+    stat(s.meals, '급식 입력 완료', s.meals >= s.pages && s.pages > 0 ? 'ok' : 'warn'),
+    stat(s.unassigned, '시간표 미지정', s.unassigned ? 'warn' : 'ok'),
+    stat(s.warningCount, '확인 필요', s.warningCount ? 'bad' : 'ok'),
+    stat(s.seedCount, '등록된 시간표', '')
+  ].join('');
+
+  document.getElementById('warnings').innerHTML = d.warnings.length
+    ? '<div class="note bad"><b>⚠ 확인이 필요합니다</b><br>· ' +
+      d.warnings.map(esc).join('<br>· ') + '</div>'
+    : '';
+
+  renderCal(d);
+  renderSeeds(d);
+}
+function stat(n, l, cls){
+  return '<div class="stat ' + cls + '"><div class="n">' + esc(n) + '</div><div class="l">' + esc(l) + '</div></div>';
+}
+
+function renderCal(d){
+  document.getElementById('calTitle').textContent =
+    d.yearMonth.substring(0,4) + '년 ' + parseInt(d.yearMonth.substring(4,6),10) + '월 시간표';
+  var today = new Date(); today.setHours(0,0,0,0);
+  var todayStr = today.getFullYear() + '-' + ('0'+(today.getMonth()+1)).slice(-2) + '-' + ('0'+today.getDate()).slice(-2);
+
+  var html = '<table class="cal"><tr><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th></tr><tr>';
+  var col = 0;
+  // 첫 주 앞쪽 빈 칸
+  if (d.days.length) { for (var i = 1; i < d.days[0].dow; i++){ html += '<td class="empty"></td>'; col++; } }
+
+  d.days.forEach(function(day){
+    if (col === 5){ html += '</tr><tr>'; col = 0; }
+    var cls = 'chip', txt = day.seed || '미지정';
+    if (!day.seed) cls += ' none';
+    else if (day.missingImage){ cls += ' bad'; txt = day.seed + ' ⚠'; }
+    else if (day.seed !== '1_45m_6p' && day.seed !== '2_45m_7p') cls += ' special';
+
+    html += '<td class="' + (day.date === todayStr ? 'today' : '') + '">'
+      + '<div class="d">' + parseInt(day.date.substring(8),10)
+      + (day.date === todayStr ? ' · 오늘' : '') + '</div>'
+      + (day.exists
+          ? '<span class="' + cls + '" onclick="openPick(\'' + day.date + '\')">' + esc(txt) + '</span>'
+          : '<span class="chip none">페이지 없음</span>')
+      + '</td>';
+    col++;
+  });
+  while (col > 0 && col < 5){ html += '<td class="empty"></td>'; col++; }
+  html += '</tr></table>';
+  document.getElementById('cal').innerHTML = html;
+}
+
+function renderSeeds(d){
+  document.getElementById('seedTitle').textContent = '등록된 시간표 ' + d.seeds.length + '개';
+  if (!d.seeds.length){
+    document.getElementById('seedGrid').innerHTML = '<div class="skel">저장소에서 목록을 가져오지 못했습니다.</div>';
+    return;
+  }
+  document.getElementById('seedGrid').innerHTML = d.seeds.map(function(s){
+    return '<div class="card">'
+      + '<div class="thumb"><img loading="lazy" src="' + esc(s.url) + '" alt=""></div>'
+      + '<div class="meta"><div class="nm">' + esc(s.name) + '</div>'
+      + '<div class="ds">' + esc(s.desc || '(설명 없음)') + '</div>'
+      + '<span class="tag ' + (s.inNotion ? 'ok' : 'bad') + '">'
+      + (s.inNotion ? '정상' : '노션 선택지 없음') + '</span></div></div>';
+  }).join('');
+}
+
+// ---------- 이미지 선택 ----------
+var drop = document.getElementById('drop'), fileInput = document.getElementById('file');
+drop.onclick = function(){ fileInput.click(); };
+drop.ondragover = function(e){ e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = function(){ drop.classList.remove('over'); };
+drop.ondrop = function(e){ e.preventDefault(); drop.classList.remove('over');
+  if (e.dataTransfer.files.length) takeFile(e.dataTransfer.files[0]); };
+fileInput.onchange = function(){ if (fileInput.files.length) takeFile(fileInput.files[0]); };
+
+function takeFile(f){
+  if (!/^image\//.test(f.type)){ alert('이미지 파일만 올릴 수 있습니다.'); return; }
+  if (f.size > 8 * 1024 * 1024){ alert('8MB 이하 이미지만 올릴 수 있습니다.'); return; }
+  var reader = new FileReader();
+  reader.onload = function(){
+    PENDING = { base64: reader.result.split(',')[1], name: f.name, size: f.size };
+    document.getElementById('dropInner').innerHTML =
+      '<img src="' + reader.result + '" alt=""><small>' + esc(f.name)
+      + ' · ' + Math.round(f.size/1024) + 'KB · 다시 누르면 교체</small>';
+    if (!document.getElementById('seedName').value){
+      document.getElementById('seedName').value = normalize(f.name.replace(/\.[^.]+$/,''));
+      previewName();
+    }
+  };
+  reader.readAsDataURL(f);
+}
+
+function previewName(){
+  var raw = document.getElementById('seedName').value;
+  var n = normalize(raw), el = document.getElementById('nameHint');
+  if (!n){ el.className = 'valid bad'; el.textContent = '이름을 입력하세요.'; return; }
+  var dup = DATA && DATA.seeds.some(function(s){ return s.name === n; });
+  if (dup){ el.className = 'valid bad';
+    el.textContent = '이미 있는 이름입니다. 계속하면 기존 ' + n + '.png 를 덮어씁니다.'; return; }
+  el.className = 'valid';
+  el.textContent = '✓ 사용 가능합니다. 파일은 ' + n + '.png 로 저장됩니다.';
+}
+
+// ---------- SHOOT ----------
+function markSteps(steps){
+  var lis = document.getElementById('steps').children;
+  for (var i = 0; i < lis.length; i++){
+    lis[i].className = '';
+    var extra = lis[i].querySelector('.dt');
+    if (extra) extra.remove();
+  }
+  steps.forEach(function(s, i){
+    if (i >= lis.length) return;
+    lis[i].className = s.ok ? 'done' : 'fail';
+    lis[i].querySelector('.dot').textContent = s.ok ? '✓' : '!';
+    if (s.detail){
+      var d = document.createElement('span');
+      d.className = 'dt'; d.textContent = s.detail;
+      lis[i].lastElementChild.appendChild(d);
+    }
+  });
+}
+
+function shoot(){
+  if (!PENDING){ alert('이미지를 먼저 올려 주세요.'); return; }
+  var name = normalize(document.getElementById('seedName').value);
+  if (!name){ alert('SEED 이름을 입력해 주세요.'); return; }
+  if (DATA && DATA.seeds.some(function(s){ return s.name === name; })){
+    if (!confirm(name + ' 은(는) 이미 있습니다. 기존 이미지를 덮어쓸까요?')) return;
+  }
+  var btn = document.getElementById('shoot');
+  btn.disabled = true; btn.textContent = '처리 중… (10~30초 걸립니다)';
+  document.getElementById('log').innerHTML = '';
+  logTo('log', '시작: ' + name);
+
+  google.script.run
+    .withSuccessHandler(function(r){
+      btn.disabled = false; btn.textContent = 'SHOOT — 등록부터 적용까지 한 번에';
+      if (r.steps) markSteps(r.steps);
+      (r.steps || []).forEach(function(s){
+        logTo('log', s.label + (s.detail ? ' — ' + s.detail : ''), s.ok ? 'g' : 'r');
+      });
+      if (!r.ok){ logTo('log', '중단: ' + r.error, 'r'); alert('실패했습니다.\n' + r.error); return; }
+      logTo('log', '완료', 'g');
+      PENDING = null;
+      document.getElementById('dropInner').innerHTML =
+        '<span class="ic">✓</span>등록 완료<small>다음 이미지를 올리려면 클릭하세요</small>';
+      loadDashboard();
+    })
+    .withFailureHandler(function(e){
+      btn.disabled = false; btn.textContent = 'SHOOT — 등록부터 적용까지 한 번에';
+      logTo('log', '오류: ' + e.message, 'r');
+      alert('오류가 발생했습니다.\n' + e.message);
+    })
+    .api_registerTimetable({
+      name: name,
+      desc: document.getElementById('seedDesc').value,
+      base64: PENDING.base64,
+      applyDate: document.getElementById('applyDate').value || ''
+    });
+}
+
+// ---------- 날짜별 SEED 변경 ----------
+function openPick(date){
+  if (!DATA) return;
+  PICK_DATE = date;
+  var day = DATA.days.filter(function(d){ return d.date === date; })[0];
+  document.getElementById('pickTitle').textContent =
+    date + ' (' + DOW[day.dow] + ') 시간표 지정';
+  var sel = document.getElementById('pickSel');
+  sel.innerHTML = '<option value="">— 지정 안 함 —</option>' + DATA.seeds.map(function(s){
+    return '<option value="' + esc(s.name) + '"' + (day.seed === s.name ? ' selected' : '') + '>'
+      + esc(s.name) + (s.desc ? ' — ' + esc(s.desc) : '') + '</option>';
+  }).join('');
+  document.getElementById('pick').showModal();
+}
+
+function applyPick(){
+  var seed = document.getElementById('pickSel').value;
+  document.getElementById('pick').close();
+  logTo('log2', PICK_DATE + ' → ' + (seed || '(해제)') + ' 적용 중…');
+  google.script.run
+    .withSuccessHandler(function(r){
+      if (r.ok){ logTo('log2', '완료' + (r.skipped ? ' (이미 같은 이미지)' : ''), 'g'); loadDashboard(); }
+      else { logTo('log2', '실패: ' + r.error, 'r'); alert(r.error); }
+    })
+    .withFailureHandler(function(e){ logTo('log2', '오류: ' + e.message, 'r'); })
+    .api_setSeedForDate(PICK_DATE, seed);
+}
+
+// ---------- 월간 작업 ----------
+function runStep(n){
+  var labels = {1:'날짜 페이지 생성', 2:'급식 메뉴 불러오기', 3:'시간표 이미지 삽입', 9:'설명서 갱신'};
+  if (n === 1 && !confirm('1번을 실행하면 수동으로 지정한 시간표가 요일 기본값으로 초기화됩니다.\n계속할까요?')) return;
+  var btns = document.querySelectorAll('.acts button');
+  for (var i = 0; i < btns.length; i++) btns[i].disabled = true;
+  logTo('log2', labels[n] + ' 실행 중… (한참 걸릴 수 있습니다)');
+
+  google.script.run
+    .withSuccessHandler(function(r){
+      for (var i = 0; i < btns.length; i++) btns[i].disabled = false;
+      if (r.ok){ logTo('log2', r.label + ' 완료 — ' + r.count + '건', 'g'); loadDashboard(); }
+      else logTo('log2', '실패: ' + r.error, 'r');
+    })
+    .withFailureHandler(function(e){
+      for (var i = 0; i < btns.length; i++) btns[i].disabled = false;
+      logTo('log2', '오류: ' + e.message, 'r');
+    })
+    .api_runStep(n, document.getElementById('ym').value);
+}
+
+// ---------- 설정 ----------
+function openSettings(){
+  google.script.run.withSuccessHandler(function(s){
+    document.getElementById('ghCur').textContent =
+      s.githubToken ? ('현재 등록됨: ' + s.githubToken) : '아직 등록되지 않았습니다.';
+    document.getElementById('setInfo').innerHTML =
+      '저장소 ' + esc(s.repo) + ' · 노션 DB ' + esc(s.notionDbId.substring(0,8))
+      + '… · SEED 속성 ' + esc(s.seedProp);
+    document.getElementById('settings').showModal();
+  }).api_getSettings();
+}
+
+function saveToken(){
+  var t = document.getElementById('ghToken').value;
+  if (!t){ alert('토큰을 입력해 주세요.'); return; }
+  google.script.run.withSuccessHandler(function(r){
+    if (r.ok){ alert('저장했습니다.'); document.getElementById('ghToken').value = '';
+      document.getElementById('settings').close(); loadDashboard(); }
+    else alert('저장하지 못했습니다.\n' + r.error);
+  }).api_saveGithubToken(t);
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
