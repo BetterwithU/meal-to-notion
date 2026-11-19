@@ -30,24 +30,43 @@ function showDashboardUrl() {
   ui.alert('대시보드 주소', url + '\n\n브라우저 즐겨찾기에 추가해 두세요.', ui.ButtonSet.OK);
 }
 
-// ===== 설정 =====
-// initializeConfig()는 Apps Script 에디터에서 최초 1회만 실행하세요.
-// 실행 후 PropertiesService에 저장되므로 값은 코드에 남기지 않습니다.
+// ===== 2027 서울사대부중 베이스캠프 마스터 설정 =====
+const DEFAULT_2027_CONFIG = {
+  NOTION_DB_ID: 'c0a2e612fa98824fb9a2819708f0290f',   // 급식+오늘의 시간표 채우기 DB
+  EVENTS_DB_ID: '82d2e612fa98823b9c4e011280e365af',   // 주요 학사 일정 FINAL DB
+  WEEKLY_DB_ID: '5cd2e612fa988379a4938164aaf73794',   // 사대부중 주간/일간 교육활동계획 DB
+  TODO_DB_ID: '70c2e612fa98830ba757818914c4bd9c',     // 오늘의 할일 To-Do DB
+  MAIN_PAGE_ID: '91d2e612fa98824b8469813a222ad032',   // 2027 서울사대부중 베이스캠프 메인
+  ATPT_OFCDC_SC_CODE: 'B10',                           // 서울특별시교육청
+  SD_SCHUL_CODE: '7021081',                            // 서울대학교사범대학부설중학교
+  TIMETABLE_PROP_NAME: 'SEED'
+};
+
+// initializeConfig()는 Apps Script 에디터에서 최초 1회 실행하거나, 
+// 속성이 비어있을 때 기본값으로 자동 로드됩니다.
 function initializeConfig() {
   PropertiesService.getScriptProperties().setProperties({
     'NEIS_API_KEY': '여기에_NEIS_API_KEY',
     'NOTION_TOKEN': '여기에_NOTION_TOKEN',
-    'NOTION_DB_ID': '여기에_NOTION_DB_ID',
-    'ATPT_OFCDC_SC_CODE': '여기에_교육청코드',
-    'SD_SCHUL_CODE': '여기에_학교코드',
+    'NOTION_DB_ID': DEFAULT_2027_CONFIG.NOTION_DB_ID,
+    'EVENTS_DB_ID': DEFAULT_2027_CONFIG.EVENTS_DB_ID,
+    'WEEKLY_DB_ID': DEFAULT_2027_CONFIG.WEEKLY_DB_ID,
+    'TODO_DB_ID': DEFAULT_2027_CONFIG.TODO_DB_ID,
+    'MAIN_PAGE_ID': DEFAULT_2027_CONFIG.MAIN_PAGE_ID,
+    'ATPT_OFCDC_SC_CODE': DEFAULT_2027_CONFIG.ATPT_OFCDC_SC_CODE,
+    'SD_SCHUL_CODE': DEFAULT_2027_CONFIG.SD_SCHUL_CODE,
     'SPREADSHEET_ID': '여기에_스프레드시트_ID',
     'TIMETABLE_PROP_NAME': 'SEED'
   });
-  Logger.log('설정 저장 완료');
+  Logger.log('2027 서울사대부중 설정 저장 완료');
 }
 
 function getConfig() {
-  return PropertiesService.getScriptProperties().getProperties();
+  const props = PropertiesService.getScriptProperties().getProperties() || {};
+  return {
+    ...DEFAULT_2027_CONFIG,
+    ...props
+  };
 }
 
 // ===== 시간표 저장소 =====
@@ -679,7 +698,7 @@ function writeManualSheet() {
   r = writeSection(sheet, r, '연결 정보', secBg);
   r = writeTableHeader(sheet, r, ['항목', '링크'], hdrBg, hdrFont);
   sheet.getRange(r, 1).setValue('노션 DB').setFontSize(10);
-  sheet.getRange(r, 2).setFormula('=HYPERLINK("https://www.notion.so/juneywooky/2fecd3403dc38007a150fe08df7c5e8f?v=2fecd3403dc381daa712000c0d522650","노션 페이지 열기")').setFontSize(10);
+  sheet.getRange(r, 2).setFormula('=HYPERLINK("https://app.notion.com/p/2027-91d2e612fa98824b8469813a222ad032","2027 베이스캠프 열기")').setFontSize(10);
   r++;
   r++;
 
@@ -765,4 +784,41 @@ function writeRow(sheet, r, label, desc, isBold) {
   sheet.getRange(r, 1).setValue(label).setFontWeight(isBold ? 'bold' : 'normal').setFontSize(10);
   sheet.getRange(r, 2).setValue(desc).setFontSize(10).setWrap(true);
   return r + 1;
+}
+
+// ===== 헬퍼: Notion DB 동적 스키마 조회 (속성명 자동 감지) =====
+let _dbSchemaCache = {};
+function getNotionDbSchema(dbId, config) {
+  config = config || getConfig();
+  if (_dbSchemaCache[dbId]) return _dbSchemaCache[dbId];
+  try {
+    const res = UrlFetchApp.fetch(
+      `https://api.notion.com/v1/databases/${dbId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${config.NOTION_TOKEN}`,
+          'Notion-Version': '2022-06-28'
+        },
+        muteHttpExceptions: true
+      }
+    );
+    if (res.getResponseCode() === 200) {
+      const data = JSON.parse(res.getContentText());
+      const props = data.properties || {};
+      const schema = {
+        titleProp: Object.keys(props).find(k => props[k].type === 'title') || '이름',
+        dateProp: Object.keys(props).find(k => props[k].type === 'date') || '날짜',
+        checkboxProp: Object.keys(props).find(k => props[k].type === 'checkbox') || '완료',
+        selectProps: Object.keys(props).filter(k => props[k].type === 'select'),
+        multiSelectProps: Object.keys(props).filter(k => props[k].type === 'multi_select'),
+        richTextProps: Object.keys(props).filter(k => props[k].type === 'rich_text'),
+        raw: props
+      };
+      _dbSchemaCache[dbId] = schema;
+      return schema;
+    }
+  } catch (e) {
+    Logger.log(`getNotionDbSchema 오류: ${e}`);
+  }
+  return { titleProp: '이름', dateProp: '날짜', checkboxProp: '완료', selectProps: [], multiSelectProps: [], richTextProps: [] };
 }

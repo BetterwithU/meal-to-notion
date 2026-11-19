@@ -1,735 +1,1159 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<base target="_top">
-<meta charset="utf-8">
-<style>
-  :root{
-    --bg:#f5f6f8; --panel:#fff; --ink:#1b1d21; --muted:#6b7280; --line:#e3e6ea;
-    --brand:#1a73e8; --brand-soft:#e8f0fe;
-    --ok:#137333; --ok-soft:#e6f4ea;
-    --warn:#b06000; --warn-soft:#fef7e0;
-    --bad:#c5221f; --bad-soft:#fce8e6;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:"Malgun Gothic","맑은 고딕",-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.55}
-  .wrap{max-width:1180px;margin:0 auto;padding:18px 20px 60px}
-  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
-  h1{font-size:21px;margin:0;font-weight:700}
-  .sub{color:var(--muted);font-size:12.5px;margin-top:3px}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>서울사대부중 2027 베이스캠프</title>
+  <!-- OFL Webfonts: Paperlogy (Headings) + Wanted Sans Variable (Body) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fonts-archive/Paperlogy/Paperlogy.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/wanteddev/wanted-sans@v1.0.3/packages/wanted-sans/fonts/webfonts/variable/split/WantedSansVariable.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <style>
+    :root {
+      /* 서울대 블루 중심의 단정하고 신뢰감 있는 라이트 테마 */
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-sub: #f1f5f9;
+      --surface-sidebar: #f8fafc;
+      --border: #e2e8f0;
+      --border-subtle: #f1f5f9;
+      
+      --text-main: #0f172a;
+      --text-sub: #475569;
+      --text-muted: #94a3b8;
+      
+      --snu-blue: #1e40af;
+      --primary: #2563eb;
+      --primary-light: #eff6ff;
+      
+      /* 기능별 단일 고정 억제 포인트 */
+      --accent-danger: #e11d48;
+      --accent-danger-bg: #fff1f2;
+      --accent-success: #059669;
+      --accent-success-bg: #ecfdf5;
+      --accent-warning: #d97706;
+      --accent-warning-bg: #fffbeb;
+      
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-pill: 9999px;
+    }
 
-  /* 탭 */
-  .tabs{display:flex;gap:6px;align-items:center;margin:16px 0;flex-wrap:wrap}
-  .tab{padding:9px 18px;border-radius:9px 9px 0 0;border:1px solid var(--line);border-bottom:none;
-    background:#eceff2;color:var(--muted);cursor:pointer;font-weight:700;font-size:13.5px}
-  .tab.on{background:#fff;color:var(--brand);border-color:var(--line)}
-  .tabs .spacer{flex:1}
-  .pane{display:none} .pane.on{display:block}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Wanted Sans Variable', 'Wanted Sans', 'Pretendard', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      line-height: 1.5;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+      letter-spacing: -0.01em;
+    }
 
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px}
-  .panel h2{font-size:16.5px;margin:0 0 3px;font-weight:700}
-  .panel .hint{color:var(--muted);font-size:13.5px;margin:0 0 14px}
-  select,input[type=text],input[type=date]{font:inherit;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
-  input[type=text]{width:100%}
-  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:#fff;padding:8px 14px;color:var(--ink)}
-  button:hover:not(:disabled){background:#f1f3f5}
-  button:disabled{opacity:.5;cursor:not-allowed}
-  button.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
-  /* 아래 button:hover 규칙이 우선순위에서 이겨 배경이 회색이 되면
-     흰 글씨가 보이지 않는다. 배경을 명시해 되돌린다. */
-  button.primary:hover:not(:disabled){background:var(--brand);border-color:var(--brand);
-    color:#fff;filter:brightness(1.08)}
-  button.big{padding:12px 20px;font-size:15px;width:100%}
+    h1, h2, h3, h4, .brand-title, .section-title, .card-title, .stat-num, .tab-btn {
+      font-family: 'Paperlogy', 'Wanted Sans Variable', 'Pretendard', sans-serif;
+      letter-spacing: -0.02em;
+    }
 
-  /* 대상 연월 — 실행 대상이 항상 눈에 보이도록 */
-  .target{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;
-    background:var(--brand-soft);border:1px solid #c6dafc;border-radius:9px;padding:12px 14px;
-    font-size:12.5px;color:#174ea6}
-  .target .lb{font-weight:700}
-  .target b{font-size:19px;font-family:Consolas,monospace;letter-spacing:.5px}
-  .acts{display:flex;gap:10px;flex-wrap:wrap}
+    .tabular {
+      font-variant-numeric: tabular-nums;
+    }
 
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px}
-  .stat{border:1px solid var(--line);border-radius:10px;padding:13px 14px}
-  .stat .n{font-size:27px;font-weight:700;line-height:1.15}
-  .stat .l{color:var(--muted);font-size:13px;margin-top:3px}
-  .stat.ok .n{color:var(--ok)} .stat.warn .n{color:var(--warn)} .stat.bad .n{color:var(--bad)}
-  .stat.warn{background:var(--warn-soft);border-color:#f0dda6}
-  .stat.bad{background:var(--bad-soft);border-color:#f3c2c0}
-  .note{background:var(--warn-soft);border:1px solid #f0dda6;color:#6b4b00;border-radius:9px;padding:11px 13px;font-size:12.5px;margin-top:12px}
-  .note.bad{background:var(--bad-soft);border-color:#f3c2c0;color:#8c1d1b}
+    /* 레이아웃 셸 */
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
 
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:22px}
-  @media(max-width:820px){.two{grid-template-columns:1fr}}
-  .drop{border:2px dashed #c3c8ce;border-radius:10px;background:#fafbfc;min-height:186px;
-    display:grid;place-items:center;text-align:center;color:var(--muted);padding:18px;cursor:pointer}
-  .drop:hover,.drop.over{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
-  .drop .ic{font-size:30px;display:block;margin-bottom:6px}
-  .drop small{display:block;margin-top:6px;font-size:11.5px;color:#9aa1a9}
-  .drop img{max-width:100%;max-height:230px;border-radius:6px}
-  .field{margin-bottom:13px}
-  .field label{display:block;font-size:12.5px;font-weight:700;margin-bottom:5px}
-  .field .note2{font-size:11.5px;color:var(--muted);margin-top:5px}
-  .valid{font-size:11.5px;margin-top:5px;color:var(--ok)}
-  .valid.bad{color:var(--bad)}
-  .steps{list-style:none;margin:14px 0 0;padding:13px 15px;border:1px solid var(--line);border-radius:10px;background:#fafbfc}
-  .steps li{display:flex;gap:9px;align-items:flex-start;padding:4px 0;font-size:12.5px;color:var(--muted)}
-  .steps .dot{width:17px;height:17px;border-radius:50%;background:#e0e3e7;color:#fff;font-size:10.5px;
-    display:grid;place-items:center;flex:none;margin-top:1px}
-  .steps li.done{color:var(--ink)} .steps li.done .dot{background:var(--ok)}
-  .steps li.fail{color:var(--bad)} .steps li.fail .dot{background:var(--bad)}
-  .steps .dt{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
+    /* 상단 통합 헤더 */
+    header.top-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
 
-  .cal{width:100%;border-collapse:collapse;table-layout:fixed}
-  .cal th{font-size:13.5px;color:var(--muted);font-weight:700;padding:0 0 8px;text-align:center}
-  .cal td{border:1px solid var(--line);vertical-align:top;height:118px;padding:8px;background:#fff}
-  .cal td.empty{background:#fafbfc;border-style:dashed}
-  .cal td.holiday{background:#f2f3f5}
-  .cal td.holiday .d{color:#9aa1a9}
-  .cal td.check{background:#fffdf5;box-shadow:inset 3px 0 0 var(--warn)}
-  /* 요일 기본값과 다른 시간표가 들어간 날 — 보라 테두리로 확실히 구분 */
-  .cal td.changed{border:2px solid #a142f4;background:#faf5ff}
-  .cal td.changed.check{background:#fdf7f0;box-shadow:inset 3px 0 0 var(--warn)}
-  .cal td.changed .d{color:#7b1fa2}
-  /* 학사일정 */
-  .evs{margin-top:6px;display:flex;flex-direction:column;gap:3px}
-  .ev{font-size:12px;line-height:1.4;color:#3a3f45;display:flex;gap:4px;align-items:flex-start}
-  .ev .ic{flex:none}
-  .ev .tx{word-break:keep-all}
-  .ev.hol{color:#8c1d1b;font-weight:700}
-  .ev.tt{color:#8a5a00;font-weight:700}
-  .evmore{font-size:11px;color:var(--muted)}
-  .cal .d{font-size:14px;font-weight:700;color:var(--muted);margin-bottom:6px}
-  .cal td.today{outline:2px solid var(--brand);outline-offset:-2px}
-  .cal td.today .d{color:var(--brand)}
-  .chip{display:inline-block;font-size:12.5px;padding:4px 9px;border-radius:999px;background:#eef0f3;color:#41464c;
-    max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border:1px solid transparent}
-  .chip:hover{border-color:var(--brand);color:var(--brand)}
-  .chip.special{background:#f3e5ff;color:#7b1fa2;font-weight:700;border-color:#d9b3f2}
-  .chip.none{background:var(--warn-soft);color:var(--warn);font-weight:700}
-  .chip.bad{background:var(--bad-soft);color:var(--bad);font-weight:700}
-  .meal{display:block;font-size:11.5px;color:var(--muted);margin-top:5px;overflow:hidden;
-    text-overflow:ellipsis;white-space:nowrap}
-  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:12.5px;color:var(--muted)}
-  .legend span{display:flex;align-items:center;gap:6px}
-  .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+    .brand-block {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:12px}
-  .card{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;cursor:zoom-in}
-  .card:hover{border-color:var(--brand);box-shadow:0 2px 10px rgba(26,115,232,.15)}
-  .card .thumb{height:88px;background:#eceff2;display:grid;place-items:center;overflow:hidden;position:relative}
-  .card .thumb img{width:100%;height:100%;object-fit:cover}
-  .card .zoom{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.55);color:#fff;
-    font-size:10px;padding:2px 6px;border-radius:4px;opacity:0;transition:opacity .12s}
-  .card:hover .zoom{opacity:1}
-  .card .meta{padding:9px 11px}
-  .card .nm{font-size:11.5px;font-weight:700;word-break:break-all;line-height:1.35}
-  .card .ds{font-size:11px;color:var(--muted);margin-top:3px}
-  .tag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:999px;margin-top:7px;font-weight:700}
-  .tag.ok{background:var(--ok-soft);color:var(--ok)}
-  .tag.bad{background:var(--bad-soft);color:var(--bad)}
+    .brand-symbol {
+      width: 32px;
+      height: 32px;
+      background: var(--snu-blue);
+      color: #fff;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 15px;
+      font-family: 'Paperlogy', sans-serif;
+    }
 
-  .log{font-family:Consolas,monospace;font-size:11.5px;background:#22252a;color:#cdd3d9;border-radius:9px;
-    padding:12px 14px;margin-top:14px;max-height:170px;overflow:auto;display:none}
-  .log .t{color:#7f8790} .log .g{color:#7ee08a} .log .r{color:#ff9c96}
-  .skel{color:var(--muted);font-size:12.5px;padding:8px 0}
+    .brand-text h1 {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-  dialog{border:none;border-radius:12px;padding:0;max-width:440px;width:92%;box-shadow:0 12px 40px rgba(0,0,0,.28)}
-  dialog::backdrop{background:rgba(0,0,0,.35)}
-  .dlg{padding:20px 22px}
-  .dlg h3{margin:0 0 4px;font-size:16px}
-  .dlg p{margin:0 0 14px;color:var(--muted);font-size:12.5px}
-  .dlg .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
-  dialog#viewer{max-width:min(96vw,1100px);width:auto}
-  #viewer .vwrap{padding:14px 16px 16px}
-  #viewer .vhead{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-bottom:10px}
-  #viewer .vname{font-size:14px;font-weight:700;word-break:break-all}
-  #viewer .vdesc{font-size:12px;color:var(--muted);margin-top:2px}
-  #viewer img{display:block;max-width:100%;max-height:74vh;border:1px solid var(--line);border-radius:6px}
-  #viewer .vfoot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;
-    font-size:11.5px;color:var(--muted);flex-wrap:wrap}
-  #viewer .nav{display:flex;gap:8px}
-</style>
+    .brand-text span {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* 상단 모드 전환 탭 (알약형) */
+    .mode-switch-group {
+      display: flex;
+      background: var(--surface-sub);
+      padding: 3px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border);
+    }
+
+    .mode-btn {
+      padding: 7px 20px;
+      border-radius: var(--radius-pill);
+      border: none;
+      background: transparent;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-sub);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mode-btn.active {
+      background: var(--surface);
+      color: var(--snu-blue);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .header-user-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--text-sub);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent-success);
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* 바디 셸 */
+    .body-shell {
+      display: flex;
+      flex: 1;
+    }
+
+    /* 좌측 사이드바 (290px 표준) */
+    aside.sidebar {
+      width: 290px;
+      background: var(--surface-sidebar);
+      border-right: 1px solid var(--border);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-track-banner {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--snu-blue);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-section {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-group-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      padding: 0 10px 4px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-group-label span.badge-count {
+      font-size: 10px;
+      background: var(--border);
+      color: var(--text-sub);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      color: var(--text-sub);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 500;
+      transition: background 0.12s ease;
+      cursor: pointer;
+    }
+
+    .nav-item:hover {
+      background: #f1f5f9;
+      color: var(--text-main);
+    }
+
+    .nav-item.active {
+      background: var(--primary-light);
+      color: var(--snu-blue);
+      font-weight: 600;
+    }
+
+    .nav-item .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-tag-discrete {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* 메인 워크스페이스 */
+    main.workspace {
+      flex: 1;
+      padding: 28px 36px;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      max-width: 1360px;
+    }
+
+    /* 긴급 일과 알림 바 */
+    .alert-strip {
+      background: var(--accent-danger-bg);
+      border: 1px solid #fecdd3;
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-main);
+      font-size: 13.5px;
+    }
+
+    .alert-strip-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .alert-tag {
+      background: var(--accent-danger);
+      color: #fff;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    /* 카드 베이스 */
+    .clean-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .clean-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 12px;
+    }
+
+    .card-title-group {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .card-meta-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .card-action-btn {
+      font-size: 12px;
+      color: var(--primary);
+      text-decoration: none;
+      background: var(--surface-sub);
+      padding: 4px 9px;
+      border-radius: 4px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    /* 1. [오늘 일과] Hero Split (시간표 60% : 급식 40%) */
+    .hero-split-grid {
+      display: grid;
+      grid-template-columns: 1.45fr 1fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    /* 시간표 타임라인 UI */
+    .timetable-timeline {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+
+    .period-block {
+      background: #fafaf9;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 8px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+    }
+
+    .period-block.current {
+      background: var(--primary-light);
+      border-color: #bfdbfe;
+    }
+
+    .period-block.substitute {
+      background: var(--accent-danger-bg);
+      border-color: #fecdd3;
+    }
+
+    .period-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .period-block.current .period-num { color: var(--primary); }
+
+    .period-subject {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .period-room {
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .period-badge-sub {
+      font-size: 9.5px;
+      background: var(--accent-danger);
+      color: #fff;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    /* 오늘의 급식 카드 */
+    .meal-box {
+      background: var(--accent-success-bg);
+      border: 1px solid #bbf7d0;
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .meal-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--accent-success);
+    }
+
+    .meal-menu-list {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+      line-height: 1.6;
+    }
+
+    .meal-calorie-info {
+      font-size: 11.5px;
+      color: #15803d;
+      margin-top: 4px;
+    }
+
+    /* 비상연락망 & 복무 안내 서브 카드 */
+    .contacts-strip-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+
+    .contact-item-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .contact-card-box {
+      background: #fafaf9;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+
+    .contact-card-box .dept { font-size: 11px; color: var(--text-muted); font-weight: 700; }
+    .contact-card-box .tel { font-size: 14px; font-weight: 700; color: var(--text-main); margin-top: 2px; }
+
+    /* 2. [학사 업무] 그리드 (GAM + 주간계획 + 학사일정 + 교육과정 검색) */
+    .gam-progress-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .gam-progress-bar-wrap {
+      width: 100%;
+      height: 10px;
+      background: var(--surface-sub);
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .gam-progress-bar-fill {
+      height: 100%;
+      background: var(--snu-blue);
+      border-radius: 5px;
+      width: 78%;
+    }
+
+    .gam-milestone-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .milestone-box {
+      background: #fafaf9;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .milestone-box.done { border-color: #bbf7d0; background: #f0fdf4; }
+    .milestone-box.active { border-color: #bfdbfe; background: var(--primary-light); }
+
+    .milestone-status { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+    .milestone-box.done .milestone-status { color: var(--accent-success); }
+    .milestone-box.active .milestone-status { color: var(--snu-blue); }
+
+    .milestone-title { font-size: 13.5px; font-weight: 700; color: var(--text-main); }
+    .milestone-date { font-size: 11.5px; color: var(--text-muted); }
+
+    /* 학사 업무 보조 그리드 (주간계획 1: 학사일정 1) */
+    .curri-secondary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .notice-feed-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .notice-feed-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      background: #fafaf9;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .notice-dday {
+      background: var(--surface-sub);
+      color: var(--text-main);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .notice-text {
+      flex: 1;
+      font-size: 13px;
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    .notice-dept { font-size: 11px; color: var(--text-muted); }
+
+    /* 학사일정 주간 뷰 */
+    .schedule-week-strip {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+
+    .schedule-day-cell {
+      background: #fafaf9;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-height: 88px;
+    }
+
+    .schedule-day-cell.today {
+      border-color: var(--snu-blue);
+      background: var(--primary-light);
+    }
+
+    .day-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .schedule-day-cell.today .day-header { color: var(--snu-blue); }
+    .day-event { font-size: 12px; font-weight: 600; color: var(--text-main); line-height: 1.35; margin-top: 4px; }
+
+    /* 하단 독 바 */
+    .quick-dock-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .dock-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .dock-links {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .dock-link-btn {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-sub);
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-sub);
+      border: 1px solid var(--border);
+      transition: all 0.12s ease;
+    }
+
+    .dock-link-btn:hover {
+      background: var(--primary-light);
+      color: var(--snu-blue);
+      border-color: #bfdbfe;
+    }
+  </style>
 </head>
 <body>
-<div class="wrap">
 
-<header class="top">
-  <div>
-    <h1>학사일정 관리 대시보드</h1>
-    <div class="sub">급식 · 시간표 · 그 밖의 돌발 일정을 한 곳에서</div>
-  </div>
-  <div class="sub" id="synced">불러오는 중…</div>
-</header>
+  <div class="app-shell">
 
-<div class="tabs">
-  <div class="tab on" id="tabDash" onclick="showTab('dash')">대시보드</div>
-  <div class="tab" id="tabReg" onclick="showTab('reg')">시간표 등록</div>
-  <div class="spacer"></div>
-  <button onclick="loadDashboard()">새로고침</button>
-  <button onclick="openSettings()">설정</button>
-</div>
+    <!-- 상단 통합 헤더 -->
+    <header class="top-header">
+      <div class="brand-block">
+        <div class="brand-symbol">부중</div>
+        <div class="brand-text">
+          <h1>서울사대부중 베이스캠프 <span>2027</span></h1>
+        </div>
+      </div>
 
-<div id="tokenWarn" style="display:none" class="note bad">
-  <b>깃허브 토큰이 등록되지 않았습니다.</b> 이미지 업로드가 동작하지 않습니다.
-  오른쪽 위 <b>[설정]</b>에서 토큰을 넣어 주세요.
-</div>
+      <!-- 상단 2대 트랙 모드 전환 탭 -->
+      <div class="mode-switch-group">
+        <button class="mode-btn active" id="btnModeLifestyle" onclick="switchDomain('lifestyle')">
+          오늘 일과
+        </button>
+        <button class="mode-btn" id="btnModeCurriculum" onclick="switchDomain('curriculum')">
+          학사 업무
+        </button>
+      </div>
 
-<!-- ============ 대시보드 탭 ============ -->
-<div class="pane on" id="paneDash">
+      <div class="header-user-meta">
+        <span class="tabular"><span class="status-dot"></span> 2026. 11. 19 (목) · 현재 4교시</span>
+        <span style="font-weight: 600; color: var(--text-main);">수학교과 연구실</span>
+      </div>
+    </header>
 
-  <!-- 1. 월간 작업 -->
-  <section class="panel">
-    <h2>월간 작업</h2>
-    <p class="hint">달을 고르고 순서대로 실행합니다. 아래 달력과 상태도 고른 달을 따라갑니다.</p>
-    <div class="target">
-      <span class="lb">대상</span>
-      <select id="ym" onchange="loadDashboard()"></select>
-      <b id="targetYm">—</b>
-      <span>이 달에 실행됩니다</span>
-    </div>
-    <div class="acts">
-      <button onclick="runStep(1)">1. 날짜 페이지 생성</button>
-      <button onclick="runStep(2)">2. 급식 메뉴 불러오기</button>
-      <button onclick="runStep(3)">3. 시간표 이미지 삽입</button>
-      <button onclick="runStep(9)">설명서 갱신</button>
-    </div>
-    <div class="note">
-      <b>1번은 주의가 필요합니다.</b> 실행하면 수동으로 지정한 시간표가 요일 기본값으로 초기화됩니다.
-      확인 창에서 초기화될 일정을 먼저 확인하세요.
-    </div>
-    <div class="log" id="log2"></div>
-  </section>
+    <div class="body-shell">
 
-  <!-- 2. 상태 -->
-  <section class="panel">
-    <h2 id="statTitle">이번 달 상태</h2>
-    <p class="hint">노션·깃허브·스프레드시트를 한 번에 확인합니다. 손볼 곳이 있으면 색으로 드러납니다.</p>
-    <div class="stats" id="stats"><div class="skel">불러오는 중…</div></div>
-    <div id="warnings"></div>
-  </section>
+      <!-- ======================= 좌측 사이드바 1: 오늘 일과 전용 ======================= -->
+      <aside class="sidebar" id="sidebarLifestyle">
+        
+        <div class="sidebar-track-banner">
+          <span>오늘 일과 모드</span>
+          <span style="font-size: 11px; color: var(--text-muted);">데일리</span>
+        </div>
 
-  <!-- 3. 달력 -->
-  <section class="panel">
-    <h2 id="calTitle">시간표 달력</h2>
-    <p class="hint">날짜의 이름표를 눌러 시간표를 바꿉니다. 바꾸면 그 자리에서 노션까지 반영됩니다.</p>
-    <div id="cal"><div class="skel">불러오는 중…</div></div>
-    <div class="legend">
-      <span><i class="sw" style="background:#eef0f3"></i> 요일 기본값 (월·수·금 6교시 / 화·목 7교시)</span>
-      <span><i class="sw" style="background:#a142f4"></i> 기본값과 다른 시간표 — 보라 테두리</span>
-      <span><i class="sw" style="background:#fef7e0"></i> 미지정</span>
-      <span><i class="sw" style="background:#fce8e6"></i> 이미지 없음 — 깨진 이미지가 들어갑니다</span>
-      <span>🚫 휴업일로 보임</span>
-      <span>💡 시간표가 달라질 수 있는 일정 — 확인하세요</span>
-    </div>
-  </section>
-
-</div>
-
-<!-- ============ 시간표 등록 탭 ============ -->
-<div class="pane" id="paneReg">
-
-  <section class="panel">
-    <h2>새 시간표 등록</h2>
-    <p class="hint">이미지를 올리고 이름만 정하면 나머지는 전부 자동입니다. 파일명은 신경 쓰지 않으셔도 됩니다.</p>
-    <div class="two">
-      <div>
-        <div class="drop" id="drop">
-          <div id="dropInner">
-            <span class="ic">⬆</span>
-            이미지를 여기로 끌어다 놓으세요
-            <small>또는 클릭해서 파일 선택 · PNG 권장</small>
+        <!-- 오늘 일과 섹션 1: 실시간 학교 생활 정보 -->
+        <div class="nav-section">
+          <div class="nav-group-label">
+            일과 정보
+            <span class="badge-count">실시간</span>
           </div>
+          <a class="nav-item active" onclick="focusWidget('timetable')">
+            <div class="nav-left">오늘 시간표</div>
+            <span class="nav-tag-discrete tabular">목 7교시</span>
+          </a>
+          <a class="nav-item" onclick="focusWidget('meal')">
+            <div class="nav-left">오늘 급식</div>
+            <span class="nav-tag-discrete tabular">중식 식단</span>
+          </a>
+          <a class="nav-item" onclick="focusWidget('contacts')">
+            <div class="nav-left">교내 비상연락망</div>
+            <span class="nav-tag-discrete">내선번호</span>
+          </a>
         </div>
-        <input type="file" id="file" accept="image/png,image/jpeg" style="display:none">
-        <ul class="steps" id="steps">
-          <li><span class="dot">1</span><span>이미지 검사</span></li>
-          <li><span class="dot">2</span><span>SEED 이름으로 파일명 변경 후 깃허브 업로드</span></li>
-          <li><span class="dot">3</span><span>설명 저장</span></li>
-          <li><span class="dot">4</span><span>CDN에서 실제로 열리는지 확인</span></li>
-          <li><span class="dot">5</span><span>노션 SEED 선택속성에 항목 추가</span></li>
-          <li><span class="dot">6</span><span>설명서 갱신</span></li>
-          <li><span class="dot">7</span><span>선택한 날짜에 이미지 삽입</span></li>
-        </ul>
-      </div>
-      <div>
-        <div class="field">
-          <label>SEED 이름 <span style="color:var(--muted);font-weight:400">— 노션 선택속성에 추가될 이름</span></label>
-          <input type="text" id="seedName" placeholder="13_40m_5p_sports" oninput="previewName()">
-          <div class="valid" id="nameHint">영문 소문자·숫자·밑줄만 씁니다. 다른 문자는 자동으로 바꿔 드립니다.</div>
+
+        <!-- 오늘 일과 섹션 2: 출퇴근 및 일상 바로가기 -->
+        <div class="nav-section">
+          <div class="nav-group-label">
+            일상 바로가기
+            <span class="badge-count">외부</span>
+          </div>
+          <a class="nav-item" href="https://neis.go.kr" target="_blank">
+            <div class="nav-left">나이스 복무 (연가·출장)</div>
+            <span class="nav-tag-discrete">나이스</span>
+          </a>
+          <a class="nav-item" href="https://snu.ms.kr" target="_blank">
+            <div class="nav-left">학교 대표 홈페이지</div>
+            <span class="nav-tag-discrete">공식</span>
+          </a>
         </div>
-        <div class="field">
-          <label>설명 <span style="color:var(--muted);font-weight:400">— 설명서에 표시될 문구</span></label>
-          <input type="text" id="seedDesc" placeholder="40분 × 5교시 (체육대회)">
+
+      </aside>
+
+      <!-- ======================= 좌측 사이드바 2: 학사 업무 전용 ======================= -->
+      <aside class="sidebar" id="sidebarCurriculum" style="display: none;">
+        
+        <div class="sidebar-track-banner">
+          <span>학사 업무 모드</span>
+          <span style="font-size: 11px; color: var(--text-muted);">교과·행정</span>
         </div>
-        <div class="field">
-          <label>적용할 날짜 <span style="color:var(--muted);font-weight:400">— 비워두면 등록만 합니다</span></label>
-          <input type="date" id="applyDate">
+
+        <!-- 학사 업무 섹션 1: 교무·학사 정보 (학사일정 & 주간계획이 정상 배치됨) -->
+        <div class="nav-section">
+          <div class="nav-group-label">
+            학사·교무 정보
+            <span class="badge-count">운영</span>
+          </div>
+          <a class="nav-item active" onclick="focusWidget('gam')">
+            <div class="nav-left">연간 교무 업무 진도표</div>
+            <span class="nav-tag-discrete">마일스톤</span>
+          </a>
+          <a class="nav-item" onclick="focusWidget('weekly')">
+            <div class="nav-left">주간 교육계획</div>
+            <span class="nav-tag-discrete">이번 주</span>
+          </a>
+          <a class="nav-item" onclick="focusWidget('calendar')">
+            <div class="nav-left">학사일정 캘린더</div>
+            <span class="nav-tag-discrete">연간/월간</span>
+          </a>
+          <a class="nav-item" onclick="focusWidget('curriSearch')">
+            <div class="nav-left">도서 및 성취기준 검색</div>
+            <span class="nav-tag-discrete">2022 개정</span>
+          </a>
         </div>
-        <button class="primary big" id="shoot" onclick="shoot()">SHOOT — 등록부터 적용까지 한 번에</button>
-      </div>
+
+        <!-- 학사 업무 섹션 2: 교무 결재 및 전용 도구 바로가기 -->
+        <div class="nav-section">
+          <div class="nav-group-label">
+            교무 도구 바로가기
+            <span class="badge-count">전용/외부</span>
+          </div>
+          <a class="nav-item" href="https://neis.go.kr" target="_blank">
+            <div class="nav-left">나이스 성적 · 생활기록부</div>
+            <span class="nav-tag-discrete">교무</span>
+          </a>
+          <a class="nav-item" href="https://klef.sen.go.kr" target="_blank">
+            <div class="nav-left">K-에듀파인 전자결재</div>
+            <span class="nav-tag-discrete">기안/공문</span>
+          </a>
+          <a class="nav-item" onclick="openDedicatedTool('practicum')">
+            <div class="nav-left">5월 교육실습(교생) 허브</div>
+            <span class="nav-tag-discrete">전용</span>
+          </a>
+          <a class="nav-item" onclick="openDedicatedTool('handover')">
+            <div class="nav-left">업무 인수인계서 작성기</div>
+            <span class="nav-tag-discrete">출력</span>
+          </a>
+        </div>
+
+      </aside>
+
+      <!-- ======================= 메인 워크스페이스 ======================= -->
+      <main class="workspace">
+
+        <!-- ======================= 1. [오늘 일과] 본문 ======================= -->
+        <div id="lifestyleDomain" style="display: flex; flex-direction: column; gap: 20px;">
+
+          <!-- 비상 일과 공지 (보강/긴급 발생 시에만 노출) -->
+          <div class="alert-strip">
+            <div class="alert-strip-left">
+              <span class="alert-tag">오늘의 보강</span>
+              <span><strong>오늘 5교시 3학년 2반</strong> 수학 수업 보강(공가 대행)이 있습니다.</span>
+            </div>
+            <button class="card-action-btn" onclick="alert('수업일지 자동 입력 팝업')">수업일지 입력</button>
+          </div>
+
+          <!-- Hero Split: [오늘 시간표 (60%)] + [오늘 급식 (40%)] -->
+          <div class="hero-split-grid">
+            
+            <!-- 카드 1: 오늘 시간표 -->
+            <div class="clean-card" id="widgetTimetable">
+              <div class="clean-card-header">
+                <div class="card-title-group">
+                  <div class="card-title">오늘 시간표</div>
+                  <div class="card-meta-desc">목요일 7교시 일과표</div>
+                </div>
+                <button class="card-action-btn" onclick="alert('전체 주간 시간표 팝업')">주간 시간표</button>
+              </div>
+
+              <div class="timetable-timeline">
+                <div class="period-block">
+                  <span class="period-num">1교시</span>
+                  <span class="period-subject">3-1 수학</span>
+                  <span class="period-room">수학1실</span>
+                </div>
+                <div class="period-block">
+                  <span class="period-num">2교시</span>
+                  <span class="period-subject">3-3 수학</span>
+                  <span class="period-room">수학1실</span>
+                </div>
+                <div class="period-block">
+                  <span class="period-num">3교시</span>
+                  <span class="period-subject">공강</span>
+                  <span class="period-room">교재연구</span>
+                </div>
+                <div class="period-block current">
+                  <span class="period-num">4교시 (현재)</span>
+                  <span class="period-subject">2-4 수학</span>
+                  <span class="period-room">수학2실</span>
+                </div>
+                <div class="period-block substitute">
+                  <span class="period-num">5교시</span>
+                  <span class="period-subject">3-2 보강</span>
+                  <span class="period-room">3-2교실</span>
+                  <span class="period-badge-sub">보강</span>
+                </div>
+                <div class="period-block">
+                  <span class="period-num">6교시</span>
+                  <span class="period-subject">동아리</span>
+                  <span class="period-room">특별실</span>
+                </div>
+                <div class="period-block">
+                  <span class="period-num">7교시</span>
+                  <span class="period-subject">학급자치</span>
+                  <span class="period-room">본관</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 카드 2: 오늘 급식 -->
+            <div class="clean-card" id="widgetMeal">
+              <div class="clean-card-header">
+                <div class="card-title-group">
+                  <div class="card-title">오늘 급식</div>
+                  <div class="card-meta-desc">중식 식단 안내</div>
+                </div>
+                <button class="card-action-btn" onclick="alert('월간 영양 식단표 팝업')">월간 식단</button>
+              </div>
+
+              <div class="meal-box">
+                <div class="meal-title-row">
+                  <span>중식 식단</span>
+                  <span class="tabular">682.4 kcal</span>
+                </div>
+                <div class="meal-menu-list">
+                  찰보리밥 · 쇠고기미역국 · 돈육간장불고기<br>
+                  해물파전 · 배추김치 · 친환경 감귤
+                </div>
+                <div class="meal-calorie-info">
+                  알레르기: 5.돼지고기, 6.대두, 9.새우, 13.아황산류
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- 서브 카드: 교내 비상연락망 및 일상 독 -->
+          <div class="clean-card" id="widgetContacts">
+            <div class="clean-card-header">
+              <div class="card-title-group">
+                <div class="card-title">교내 비상연락망</div>
+                <div class="card-meta-desc">주요 부서 직통 내선번호</div>
+              </div>
+              <button class="card-action-btn" onclick="alert('전체 교직원 내선번호부 열기')">전체 내선번호</button>
+            </div>
+
+            <div class="contact-item-row">
+              <div class="contact-card-box">
+                <div class="dept">교무기획부</div>
+                <div class="tel tabular">내선 701</div>
+              </div>
+              <div class="contact-card-box">
+                <div class="dept">교육연구부</div>
+                <div class="tel tabular">내선 703</div>
+              </div>
+              <div class="contact-card-box">
+                <div class="dept">보건실</div>
+                <div class="tel tabular">내선 715</div>
+              </div>
+              <div class="contact-card-box">
+                <div class="dept">행정실</div>
+                <div class="tel tabular">내선 720</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 일과 하단 독: 출퇴근 및 학교 링크 -->
+          <div class="quick-dock-bar">
+            <div class="dock-title">출퇴근 및 복무 링크</div>
+            <div class="dock-links">
+              <a href="https://neis.go.kr" target="_blank" class="dock-link-btn">나이스 복무승인</a>
+              <a href="https://snu.ms.kr" target="_blank" class="dock-link-btn">학교 대표 홈페이지</a>
+            </div>
+          </div>
+
+        </div>
+
+
+        <!-- ======================= 2. [학사 업무] 본문 ======================= -->
+        <div id="curriculumDomain" style="display: none; flex-direction: column; gap: 20px;">
+
+          <!-- 1. GAM 연간 교무 업무 진도표 -->
+          <div class="gam-progress-card" id="widgetGam">
+            <div class="clean-card-header">
+              <div class="card-title-group">
+                <div class="card-title">연간 교무 업무 진도표</div>
+                <div class="card-meta-desc">2학기 주요 교무·평가 업무 마감 현황</div>
+              </div>
+              <span class="tabular" style="font-weight: 700; color: var(--snu-blue);">진척도 78% 완료</span>
+            </div>
+
+            <div class="gam-progress-bar-wrap">
+              <div class="gam-progress-bar-fill"></div>
+            </div>
+
+            <div class="gam-milestone-grid">
+              <div class="milestone-box done">
+                <span class="milestone-status">완료</span>
+                <span class="milestone-title">1학기 학교생활기록부</span>
+                <span class="milestone-date tabular">8월 29일 마감</span>
+              </div>
+              <div class="milestone-box done">
+                <span class="milestone-status">완료</span>
+                <span class="milestone-title">2학기 1차 지필평가</span>
+                <span class="milestone-date tabular">10월 14일 마감</span>
+              </div>
+              <div class="milestone-box active">
+                <span class="milestone-status">진행 중 (D-1)</span>
+                <span class="milestone-title">2차 지필 출제 및 이원목적</span>
+                <span class="milestone-date tabular">11월 20일 마감</span>
+              </div>
+              <div class="milestone-box">
+                <span class="milestone-status">예정</span>
+                <span class="milestone-title">학년말 학적·생기부 마감</span>
+                <span class="milestone-date tabular">12월 24일 예정</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. 주간 교육계획 & 학사일정 (정상 배치됨!) -->
+          <div class="curri-secondary-grid">
+            
+            <!-- 주간 교육계획 -->
+            <div class="clean-card" id="widgetWeekly">
+              <div class="clean-card-header">
+                <div class="card-title-group">
+                  <div class="card-title">주간 교육계획</div>
+                  <div class="card-meta-desc">11월 3주차 주요 교무 안내</div>
+                </div>
+                <button class="card-action-btn" onclick="alert('주간계획 전문 열기')">공지 전문</button>
+              </div>
+
+              <div class="notice-feed-list">
+                <div class="notice-feed-item">
+                  <span class="notice-dday">오늘 마감</span>
+                  <div class="notice-text">
+                    2학기 2차 지필평가 이원목적분류표 및 문제지 나이스 제출 마감
+                    <div class="notice-dept">교육연구부 · 17:00까지</div>
+                  </div>
+                </div>
+                <div class="notice-feed-item">
+                  <span class="notice-dday">내일 (금)</span>
+                  <div class="notice-text">
+                    교과협의회 운영 및 2027 학년도 교과용 도서 선정 의견 수렴
+                    <div class="notice-dept">교무기획부 · 각 교과협의실</div>
+                  </div>
+                </div>
+                <div class="notice-feed-item">
+                  <span class="notice-dday">차주 수</span>
+                  <div class="notice-text">
+                    교원능력개발평가 교원 자기평가 입력 완료일
+                    <div class="notice-dept">연구부</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 학사일정 캘린더 (학사 업무에 완벽하게 안착!) -->
+            <div class="clean-card" id="widgetCalendar">
+              <div class="clean-card-header">
+                <div class="card-title-group">
+                  <div class="card-title">학사일정 캘린더</div>
+                  <div class="card-meta-desc">11월 17일 ~ 11월 21일</div>
+                </div>
+                <button class="card-action-btn" onclick="alert('연간 학사일정 전체보기')">연간 일정</button>
+              </div>
+
+              <div class="schedule-week-strip">
+                <div class="schedule-day-cell">
+                  <div class="day-header"><span>월</span><span>17</span></div>
+                  <div class="day-event">학부모상담주간 시작</div>
+                </div>
+                <div class="schedule-day-cell">
+                  <div class="day-header"><span>화</span><span>18</span></div>
+                  <div class="day-event">민방위훈련 (3교시)</div>
+                </div>
+                <div class="schedule-day-cell">
+                  <div class="day-header"><span>수</span><span>19</span></div>
+                  <div class="day-event">교직원 연수</div>
+                </div>
+                <div class="schedule-day-cell today">
+                  <div class="day-header"><span>목 (오늘)</span><span class="tabular">20</span></div>
+                  <div class="day-event">2차 지필 출제마감</div>
+                </div>
+                <div class="schedule-day-cell">
+                  <div class="day-header"><span>금</span><span>21</span></div>
+                  <div class="day-event">학부모상담주간 종료</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- 3. 도서 및 성취기준 검색 & 전용 도구 런처 -->
+          <div class="curri-secondary-grid">
+            
+            <div class="clean-card" id="widgetCurriSearch">
+              <div class="clean-card-header">
+                <div class="card-title-group">
+                  <div class="card-title">도서관 도서 및 성취기준 검색</div>
+                  <div class="card-meta-desc">소장도서 목록 · 2022 개정 성취기준</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" placeholder="검색어 입력 (예: 일차함수, 미적분, 추천도서)..." style="flex: 1; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13.5px;" />
+                <button class="dock-link-btn" style="background: var(--snu-blue); color: #fff; border-color: var(--snu-blue);">검색</button>
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                • 국립중앙도서관 및 학교도서관 DLS 소장자료 검색<br>
+                • 국가교육과정정보센터(NCIC) 2022 개정 중등 성취기준 코드 검색
+              </div>
+            </div>
+
+            <div class="clean-card" id="widgetLaunchers">
+              <div class="clean-card-header">
+                <div class="card-title-group">
+                  <div class="card-title">교과 및 실습 도구</div>
+                  <div class="card-meta-desc">전용 업무 도구 바로가기</div>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #fafaf9; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+                  <div>
+                    <div style="font-weight: 700; font-size: 13.5px;">5월 교육실습(교생) 허브</div>
+                    <div style="font-size: 11.5px; color: var(--text-muted);">실습생 배정, 참관록, 지도안 결재 포털</div>
+                  </div>
+                  <button class="card-action-btn" onclick="openDedicatedTool('practicum')">열기</button>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #fafaf9; border: 1px solid var(--border); border-radius: var(--radius-sm);">
+                  <div>
+                    <div style="font-weight: 700; font-size: 13.5px;">업무 인수인계서 작성기</div>
+                    <div style="font-size: 11.5px; color: var(--text-muted);">학년말 사무인수인계서 규격 자동 출력</div>
+                  </div>
+                  <button class="card-action-btn" onclick="openDedicatedTool('handover')">작성하기</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- 학사 업무 하단 독 -->
+          <div class="quick-dock-bar">
+            <div class="dock-title">교무 시스템 바로가기</div>
+            <div class="dock-links">
+              <a href="https://neis.go.kr" target="_blank" class="dock-link-btn">나이스 성적·생활기록부</a>
+              <a href="https://klef.sen.go.kr" target="_blank" class="dock-link-btn">K-에듀파인 전자결재</a>
+            </div>
+          </div>
+
+        </div>
+
+      </main>
+
     </div>
-    <div class="log" id="log"></div>
-  </section>
 
-  <section class="panel">
-    <h2 id="seedTitle">등록된 시간표</h2>
-    <p class="hint">카드를 누르면 크게 볼 수 있습니다. 저장소 이미지와 노션 선택지가 맞는지 자동으로 대조합니다.</p>
-    <div class="grid" id="seedGrid"><div class="skel">불러오는 중…</div></div>
-  </section>
-
-</div>
-
-</div>
-
-<!-- SEED 선택 -->
-<dialog id="pick"><div class="dlg">
-  <h3 id="pickTitle">시간표 지정</h3>
-  <div id="pickEvents"></div>
-  <p>고르면 노션 속성과 이미지가 함께 바뀝니다.</p>
-  <select id="pickSel" style="width:100%"></select>
-  <div class="row">
-    <button onclick="document.getElementById('pick').close()">취소</button>
-    <button class="primary" onclick="applyPick()">적용</button>
   </div>
-</div></dialog>
 
-<!-- 확대 보기 -->
-<dialog id="viewer"><div class="vwrap">
-  <div class="vhead">
-    <div>
-      <div class="vname" id="vName"></div>
-      <div class="vdesc" id="vDesc"></div>
-    </div>
-    <button onclick="document.getElementById('viewer').close()">닫기</button>
-  </div>
-  <img id="vImg" src="" alt="">
-  <div class="vfoot">
-    <span id="vPos"></span>
-    <span class="nav">
-      <button onclick="stepViewer(-1)">← 이전</button>
-      <button onclick="stepViewer(1)">다음 →</button>
-    </span>
-  </div>
-</div></dialog>
+  <script>
+    // 상단 2대 트랙 모드 전환: 사이드바와 본문이 100% 함께 동기화됨!
+    function switchDomain(mode) {
+      const btnLifestyle = document.getElementById('btnModeLifestyle');
+      const btnCurriculum = document.getElementById('btnModeCurriculum');
+      
+      const sidebarLifestyle = document.getElementById('sidebarLifestyle');
+      const sidebarCurriculum = document.getElementById('sidebarCurriculum');
+      
+      const lifestyleDomain = document.getElementById('lifestyleDomain');
+      const curriculumDomain = document.getElementById('curriculumDomain');
 
-<!-- 설정 -->
-<dialog id="settings"><div class="dlg">
-  <h3>설정</h3>
-  <p>토큰은 서버(스크립트 속성)에만 저장되며 브라우저로 내려오지 않습니다.</p>
-  <div class="field">
-    <label>깃허브 토큰</label>
-    <input type="text" id="ghToken" placeholder="ghp_… 또는 github_pat_…">
-    <div class="note2" id="ghCur"></div>
-  </div>
-  <div class="note2" id="setInfo"></div>
-  <div class="row">
-    <button onclick="document.getElementById('settings').close()">닫기</button>
-    <button class="primary" onclick="saveToken()">저장</button>
-  </div>
-</div></dialog>
-
-<script>
-var DATA = null, PENDING = null, PICK_DATE = null, VIEW_IDX = -1;
-var DOW = ['일','월','화','수','목','금','토'];
-
-function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){
-  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-function normalize(v){
-  return String(v||'').trim().toLowerCase().replace(/\.png$/,'')
-    .replace(/[^a-z0-9_]+/g,'_').replace(/_{2,}/g,'_').replace(/^_+|_+$/g,'');
-}
-function logTo(id, msg, cls){
-  var el = document.getElementById(id);
-  el.style.display = 'block';
-  var t = new Date().toTimeString().substring(0,8);
-  el.innerHTML += '<div><span class="t">'+t+'</span> <span class="'+(cls||'')+'">'+esc(msg)+'</span></div>';
-  el.scrollTop = el.scrollHeight;
-}
-
-// ---------- 탭 ----------
-function showTab(which){
-  var dash = which === 'dash';
-  document.getElementById('paneDash').className = 'pane' + (dash ? ' on' : '');
-  document.getElementById('paneReg').className = 'pane' + (dash ? '' : ' on');
-  document.getElementById('tabDash').className = 'tab' + (dash ? ' on' : '');
-  document.getElementById('tabReg').className = 'tab' + (dash ? '' : ' on');
-  window.scrollTo(0, 0);
-}
-
-// ---------- 연월 ----------
-(function initYm(){
-  var sel = document.getElementById('ym'), now = new Date();
-  for (var i = -2; i <= 3; i++){
-    var d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    var v = d.getFullYear() + ('0' + (d.getMonth()+1)).slice(-2);
-    var o = document.createElement('option');
-    o.value = v;
-    o.textContent = d.getFullYear() + '년 ' + (d.getMonth()+1) + '월';
-    if (i === 0) o.selected = true;
-    sel.appendChild(o);
-  }
-})();
-function updateTarget(){
-  var ym = document.getElementById('ym').value;
-  document.getElementById('targetYm').textContent = ym;
-  document.getElementById('statTitle').textContent =
-    ym.substring(0,4) + '년 ' + parseInt(ym.substring(4),10) + '월 상태';
-}
-
-// ---------- 대시보드 ----------
-function loadDashboard(){
-  updateTarget();
-  document.getElementById('synced').textContent = '불러오는 중…';
-  google.script.run.withSuccessHandler(render).withFailureHandler(function(e){
-    document.getElementById('synced').textContent = '불러오기 실패';
-    document.getElementById('stats').innerHTML =
-      '<div class="note bad">불러오지 못했습니다: ' + esc(e.message) + '</div>';
-  }).api_getDashboard(document.getElementById('ym').value);
-}
-
-function render(d){
-  DATA = d;
-  updateTarget();
-  document.getElementById('synced').textContent = '마지막 동기화 ' + d.syncedAt;
-  document.getElementById('tokenWarn').style.display = d.hasGithubToken ? 'none' : 'block';
-
-  var s = d.stats;
-  var changedCount = d.days.filter(function(day){
-    var exp = (day.dow === 1 || day.dow === 3 || day.dow === 5) ? '1_45m_6p' : '2_45m_7p';
-    return day.seed && day.seed !== exp;
-  }).length;
-  document.getElementById('stats').innerHTML = [
-    stat(s.pages + '/' + s.weekdays, '노션 페이지 (평일)', s.missingPages ? 'warn' : 'ok'),
-    stat(s.meals + '/' + s.pages, '급식 입력 완료', (s.pages && s.meals >= s.pages) ? 'ok' : 'warn'),
-    stat(s.unassigned, '시간표 미지정 (페이지 있는 날)', s.unassigned ? 'warn' : 'ok'),
-    stat(s.checkDays, '시간표 확인 필요 (학사일정 있음)', s.checkDays ? 'warn' : 'ok'),
-    stat(changedCount, '기본값과 다른 시간표', ''),
-    stat(s.warningCount, '확인 필요', s.warningCount ? 'bad' : 'ok'),
-    stat(s.seedCount, '등록된 시간표', '')
-  ].join('');
-
-  var html = '';
-  if (d.warnings.length){
-    html += '<div class="note bad"><b>⚠ 확인이 필요합니다</b><br>· '
-      + d.warnings.map(esc).join('<br>· ') + '</div>';
-  }
-  if (d.notes && d.notes.length){
-    html += '<div class="note" style="background:#f4f5f7;border-color:var(--line);color:var(--muted)">· '
-      + d.notes.map(esc).join('<br>· ') + '</div>';
-  }
-  document.getElementById('warnings').innerHTML = html;
-
-  renderCal(d);
-  renderSeeds(d);
-}
-function stat(n, l, cls){
-  return '<div class="stat ' + cls + '"><div class="n">' + esc(n) + '</div><div class="l">' + esc(l) + '</div></div>';
-}
-
-function renderCal(d){
-  document.getElementById('calTitle').textContent =
-    d.yearMonth.substring(0,4) + '년 ' + parseInt(d.yearMonth.substring(4,6),10) + '월 시간표';
-  var today = new Date();
-  var todayStr = today.getFullYear() + '-' + ('0'+(today.getMonth()+1)).slice(-2) + '-' + ('0'+today.getDate()).slice(-2);
-
-  var html = '<table class="cal"><tr><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th></tr><tr>';
-  var col = 0;
-  if (d.days.length){ for (var i = 1; i < d.days[0].dow; i++){ html += '<td class="empty"></td>'; col++; } }
-
-  d.days.forEach(function(day){
-    if (col === 5){ html += '</tr><tr>'; col = 0; }
-    // 이름으로 판단하면 "화요일에 월수금 시간표" 같은 변경을 놓친다.
-    // 그 요일의 기본값과 비교해야 실제로 바뀐 날이 드러난다.
-    var expected = (day.dow === 1 || day.dow === 3 || day.dow === 5) ? '1_45m_6p' : '2_45m_7p';
-    var changed = !!day.seed && day.seed !== expected;
-
-    var cls = 'chip', txt = day.seed || '미지정';
-    if (!day.seed) cls += ' none';
-    else if (day.missingImage){ cls += ' bad'; txt = day.seed + ' ⚠'; }
-    else if (changed) cls += ' special';
-
-    var tdCls = [];
-    if (day.date === todayStr) tdCls.push('today');
-    if (day.holiday) tdCls.push('holiday');
-    else if (day.needsCheck) tdCls.push('check');
-    if (changed && !day.holiday) tdCls.push('changed');
-
-    html += '<td class="' + tdCls.join(' ') + '">'
-      + '<div class="d">' + parseInt(day.date.substring(8),10)
-      + (day.date === todayStr ? ' · 오늘' : '') + '</div>'
-      + (day.exists
-          ? '<span class="' + cls + '" onclick="openPick(\'' + day.date + '\')">' + esc(txt) + '</span>'
-            + (day.hasMenu ? '<span class="meal">🍚 급식 있음</span>' : '')
-          : '<span class="chip none">페이지 없음</span>')
-      + renderEvents(day.events)
-      + '</td>';
-    col++;
-  });
-  while (col > 0 && col < 5){ html += '<td class="empty"></td>'; col++; }
-  html += '</tr></table>';
-  document.getElementById('cal').innerHTML = html;
-}
-
-// 학사일정을 달력 칸에 표시한다. 판단은 사람이 하고, 화면은 놓치지 않게만 해준다.
-function renderEvents(events){
-  if (!events || !events.length) return '';
-  var shown = events.slice(0, 4);
-  var html = '<div class="evs">' + shown.map(function(e){
-    var cls = e.holiday ? 'hol' : (e.timetable ? 'tt' : '');
-    var ic  = e.holiday ? '🚫' : (e.timetable ? '💡' : '·');
-    return '<span class="ev ' + cls + '" title="' + esc(e.name + (e.span ? ' (' + e.span + ')' : '')) + '">'
-      + '<span class="ic">' + ic + '</span><span class="tx">' + esc(e.name) + '</span></span>';
-  }).join('');
-  if (events.length > shown.length){
-    html += '<span class="evmore">외 ' + (events.length - shown.length) + '건</span>';
-  }
-  return html + '</div>';
-}
-
-function renderSeeds(d){
-  document.getElementById('seedTitle').textContent = '등록된 시간표 ' + d.seeds.length + '개';
-  if (!d.seeds.length){
-    document.getElementById('seedGrid').innerHTML = '<div class="skel">저장소에서 목록을 가져오지 못했습니다.</div>';
-    return;
-  }
-  document.getElementById('seedGrid').innerHTML = d.seeds.map(function(s, i){
-    return '<div class="card" onclick="openViewer(' + i + ')" title="누르면 크게 봅니다">'
-      + '<div class="thumb"><img loading="lazy" src="' + esc(s.url) + '" alt="">'
-      + '<span class="zoom">크게 보기</span></div>'
-      + '<div class="meta"><div class="nm">' + esc(s.name) + '</div>'
-      + '<div class="ds">' + esc(s.desc || '(설명 없음)') + '</div>'
-      + '<span class="tag ' + (s.inNotion ? 'ok' : 'bad') + '">'
-      + (s.inNotion ? '정상' : '노션 선택지 없음') + '</span></div></div>';
-  }).join('');
-}
-
-// ---------- 확대 보기 ----------
-function openViewer(i){
-  if (!DATA || !DATA.seeds[i]) return;
-  VIEW_IDX = i;
-  var s = DATA.seeds[i];
-  document.getElementById('vName').textContent = s.name;
-  document.getElementById('vDesc').textContent = s.desc || '(설명 없음)';
-  document.getElementById('vImg').src = s.url;
-  document.getElementById('vPos').textContent = (i + 1) + ' / ' + DATA.seeds.length;
-  var dlg = document.getElementById('viewer');
-  if (!dlg.open) dlg.showModal();
-}
-function stepViewer(delta){
-  if (!DATA || VIEW_IDX < 0) return;
-  var n = DATA.seeds.length;
-  openViewer((VIEW_IDX + delta + n) % n);
-}
-document.getElementById('viewer').addEventListener('click', function(e){
-  if (e.target.id === 'viewer') e.target.close();
-});
-document.addEventListener('keydown', function(e){
-  if (!document.getElementById('viewer').open) return;
-  if (e.key === 'ArrowLeft') stepViewer(-1);
-  if (e.key === 'ArrowRight') stepViewer(1);
-});
-
-// ---------- 이미지 선택 ----------
-var drop = document.getElementById('drop'), fileInput = document.getElementById('file');
-drop.onclick = function(){ fileInput.click(); };
-drop.ondragover = function(e){ e.preventDefault(); drop.classList.add('over'); };
-drop.ondragleave = function(){ drop.classList.remove('over'); };
-drop.ondrop = function(e){ e.preventDefault(); drop.classList.remove('over');
-  if (e.dataTransfer.files.length) takeFile(e.dataTransfer.files[0]); };
-fileInput.onchange = function(){ if (fileInput.files.length) takeFile(fileInput.files[0]); };
-
-function takeFile(f){
-  if (!/^image\//.test(f.type)){ alert('이미지 파일만 올릴 수 있습니다.'); return; }
-  if (f.size > 8 * 1024 * 1024){ alert('8MB 이하 이미지만 올릴 수 있습니다.'); return; }
-  var reader = new FileReader();
-  reader.onload = function(){
-    PENDING = { base64: reader.result.split(',')[1], name: f.name, size: f.size };
-    document.getElementById('dropInner').innerHTML =
-      '<img src="' + reader.result + '" alt=""><small>' + esc(f.name)
-      + ' · ' + Math.round(f.size/1024) + 'KB · 다시 누르면 교체</small>';
-    if (!document.getElementById('seedName').value){
-      document.getElementById('seedName').value = normalize(f.name.replace(/\.[^.]+$/,''));
-      previewName();
+      if (mode === 'lifestyle') {
+        btnLifestyle.classList.add('active');
+        btnCurriculum.classList.remove('active');
+        
+        sidebarLifestyle.style.display = 'flex';
+        sidebarCurriculum.style.display = 'none';
+        
+        lifestyleDomain.style.display = 'flex';
+        curriculumDomain.style.display = 'none';
+      } else {
+        btnCurriculum.classList.add('active');
+        btnLifestyle.classList.remove('active');
+        
+        sidebarLifestyle.style.display = 'none';
+        sidebarCurriculum.style.display = 'flex';
+        
+        lifestyleDomain.style.display = 'none';
+        curriculumDomain.style.display = 'flex';
+      }
     }
-  };
-  reader.readAsDataURL(f);
-}
 
-function previewName(){
-  var n = normalize(document.getElementById('seedName').value), el = document.getElementById('nameHint');
-  if (!n){ el.className = 'valid bad'; el.textContent = '이름을 입력하세요.'; return; }
-  var dup = DATA && DATA.seeds.some(function(s){ return s.name === n; });
-  if (dup){ el.className = 'valid bad';
-    el.textContent = '이미 있는 이름입니다. 계속하면 기존 ' + n + '.png 를 덮어씁니다.'; return; }
-  el.className = 'valid';
-  el.textContent = '✓ 사용 가능합니다. 파일은 ' + n + '.png 로 저장됩니다.';
-}
-
-// ---------- SHOOT ----------
-function markSteps(steps){
-  var lis = document.getElementById('steps').children;
-  for (var i = 0; i < lis.length; i++){
-    lis[i].className = '';
-    var extra = lis[i].querySelector('.dt');
-    if (extra) extra.remove();
-  }
-  steps.forEach(function(s, i){
-    if (i >= lis.length) return;
-    lis[i].className = s.ok ? 'done' : 'fail';
-    lis[i].querySelector('.dot').textContent = s.ok ? '✓' : '!';
-    if (s.detail){
-      var d = document.createElement('span');
-      d.className = 'dt'; d.textContent = s.detail;
-      lis[i].lastElementChild.appendChild(d);
+    // 사이드바 메뉴 클릭 시 해당 위젯으로 부드럽게 스크롤 & 강조
+    function focusWidget(widgetId) {
+      const map = {
+        timetable: 'widgetTimetable',
+        meal: 'widgetMeal',
+        contacts: 'widgetContacts',
+        gam: 'widgetGam',
+        weekly: 'widgetWeekly',
+        calendar: 'widgetCalendar',
+        curriSearch: 'widgetCurriSearch',
+        launchers: 'widgetLaunchers'
+      };
+      const target = document.getElementById(map[widgetId]);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.style.transition = 'outline 0.2s ease';
+        target.style.outline = '2px solid var(--snu-blue)';
+        setTimeout(() => target.style.outline = 'none', 1200);
+      }
     }
-  });
-}
 
-function shoot(){
-  if (!PENDING){ alert('이미지를 먼저 올려 주세요.'); return; }
-  var name = normalize(document.getElementById('seedName').value);
-  if (!name){ alert('SEED 이름을 입력해 주세요.'); return; }
-  if (DATA && DATA.seeds.some(function(s){ return s.name === name; })){
-    if (!confirm(name + ' 은(는) 이미 있습니다. 기존 이미지를 덮어쓸까요?')) return;
-  }
-  var btn = document.getElementById('shoot');
-  btn.disabled = true; btn.textContent = '처리 중… (10~30초 걸립니다)';
-  document.getElementById('log').innerHTML = '';
-  logTo('log', '시작: ' + name);
+    // 전용 도구 실행 안내
+    function openDedicatedTool(tool) {
+      if (tool === 'practicum') {
+        alert('5월 교육실습 전용 허브를 새 창에서 실행합니다.');
+      } else if (tool === 'handover') {
+        alert('사무인수인계서 출력기를 새 창에서 실행합니다.');
+      }
+    }
+  </script>
 
-  google.script.run
-    .withSuccessHandler(function(r){
-      btn.disabled = false; btn.textContent = 'SHOOT — 등록부터 적용까지 한 번에';
-      if (r.steps) markSteps(r.steps);
-      (r.steps || []).forEach(function(s){
-        logTo('log', s.label + (s.detail ? ' — ' + s.detail : ''), s.ok ? 'g' : 'r');
-      });
-      if (!r.ok){ logTo('log', '중단: ' + r.error, 'r'); alert('실패했습니다.\n' + r.error); return; }
-      logTo('log', '완료', 'g');
-      PENDING = null;
-      document.getElementById('dropInner').innerHTML =
-        '<span class="ic">✓</span>등록 완료<small>다음 이미지를 올리려면 클릭하세요</small>';
-      loadDashboard();
-    })
-    .withFailureHandler(function(e){
-      btn.disabled = false; btn.textContent = 'SHOOT — 등록부터 적용까지 한 번에';
-      logTo('log', '오류: ' + e.message, 'r');
-      alert('오류가 발생했습니다.\n' + e.message);
-    })
-    .api_registerTimetable({
-      name: name,
-      desc: document.getElementById('seedDesc').value,
-      base64: PENDING.base64,
-      applyDate: document.getElementById('applyDate').value || ''
-    });
-}
-
-// ---------- 날짜별 SEED 변경 ----------
-function openPick(date){
-  if (!DATA) return;
-  PICK_DATE = date;
-  var day = DATA.days.filter(function(d){ return d.date === date; })[0];
-  document.getElementById('pickTitle').textContent = date + ' (' + DOW[day.dow] + ') 시간표 지정';
-
-  // 고를 때 근거가 같이 보이도록 그날 학사일정을 함께 띄운다
-  var ev = document.getElementById('pickEvents');
-  if (day.events && day.events.length){
-    ev.innerHTML = '<div class="note" style="margin:0 0 12px">'
-      + '<b>이날의 학사일정</b><br>'
-      + day.events.map(function(e){
-          return (e.holiday ? '🚫 ' : (e.timetable ? '💡 ' : '· '))
-            + esc(e.name) + (e.span ? ' <span style="color:#8a7a55">(' + esc(e.span) + ')</span>' : '');
-        }).join('<br>')
-      + '</div>';
-  } else {
-    ev.innerHTML = '<p style="margin:0 0 12px;color:var(--muted);font-size:12px">이날은 등록된 학사일정이 없습니다.</p>';
-  }
-
-  var sel = document.getElementById('pickSel');
-  sel.innerHTML = '<option value="">— 지정 안 함 —</option>' + DATA.seeds.map(function(s){
-    return '<option value="' + esc(s.name) + '"' + (day.seed === s.name ? ' selected' : '') + '>'
-      + esc(s.name) + (s.desc ? ' — ' + esc(s.desc) : '') + '</option>';
-  }).join('');
-  document.getElementById('pick').showModal();
-}
-
-function applyPick(){
-  var seed = document.getElementById('pickSel').value;
-  document.getElementById('pick').close();
-  logTo('log2', PICK_DATE + ' → ' + (seed || '(해제)') + ' 적용 중…');
-  google.script.run
-    .withSuccessHandler(function(r){
-      if (r.ok){ logTo('log2', '완료' + (r.skipped ? ' (이미 같은 이미지)' : ''), 'g'); loadDashboard(); }
-      else { logTo('log2', '실패: ' + r.error, 'r'); alert(r.error); }
-    })
-    .withFailureHandler(function(e){ logTo('log2', '오류: ' + e.message, 'r'); })
-    .api_setSeedForDate(PICK_DATE, seed);
-}
-
-// ---------- 월간 작업 ----------
-function runStep(n){
-  var labels = {1:'날짜 페이지 생성', 2:'급식 메뉴 불러오기', 3:'시간표 이미지 삽입', 9:'설명서 갱신'};
-  var sel = document.getElementById('ym');
-  var ym = sel.value, ymText = sel.options[sel.selectedIndex].textContent;
-
-  // 실행 대상이 어느 달인지 반드시 확인받는다 — 다른 달을 초기화하면 되돌리기 어렵다
-  if (n === 1){
-    var used = (DATA ? DATA.days.filter(function(d){
-      return d.seed && d.seed !== '1_45m_6p' && d.seed !== '2_45m_7p'; }) : []);
-    var msg = '【' + ymText + ' / ' + ym + '】의 날짜 페이지를 생성합니다.\n\n'
-      + '⚠ 수동으로 지정한 시간표가 요일 기본값으로 초기화됩니다.\n';
-    msg += used.length
-      ? '\n초기화될 특수 일정 ' + used.length + '건:\n'
-        + used.map(function(d){ return '  · ' + d.date + ' — ' + d.seed; }).join('\n')
-        + '\n\n실행 후 달력에서 다시 지정하셔야 합니다.\n\n계속할까요?'
-      : '\n지금 이 달에 수동 지정된 시간표는 없습니다.\n\n계속할까요?';
-    if (!confirm(msg)) return;
-  } else if (n !== 9) {
-    if (!confirm('【' + ymText + ' / ' + ym + '】 기준으로 ' + labels[n] + '을(를) 실행합니다.\n계속할까요?')) return;
-  }
-
-  var btns = document.querySelectorAll('.acts button');
-  for (var i = 0; i < btns.length; i++) btns[i].disabled = true;
-  logTo('log2', ym + ' — ' + labels[n] + ' 실행 중… (한참 걸릴 수 있습니다)');
-
-  google.script.run
-    .withSuccessHandler(function(r){
-      for (var i = 0; i < btns.length; i++) btns[i].disabled = false;
-      if (r.ok){ logTo('log2', r.label + ' 완료 — ' + r.count + '건', 'g'); loadDashboard(); }
-      else logTo('log2', '실패: ' + r.error, 'r');
-    })
-    .withFailureHandler(function(e){
-      for (var i = 0; i < btns.length; i++) btns[i].disabled = false;
-      logTo('log2', '오류: ' + e.message, 'r');
-    })
-    .api_runStep(n, ym);
-}
-
-// ---------- 설정 ----------
-function openSettings(){
-  google.script.run.withSuccessHandler(function(s){
-    document.getElementById('ghCur').textContent =
-      s.githubToken ? ('현재 등록됨: ' + s.githubToken) : '아직 등록되지 않았습니다.';
-    document.getElementById('setInfo').innerHTML =
-      '저장소 ' + esc(s.repo) + ' · 노션 DB ' + esc(s.notionDbId.substring(0,8))
-      + '… · SEED 속성 ' + esc(s.seedProp);
-    document.getElementById('settings').showModal();
-  }).api_getSettings();
-}
-
-function saveToken(){
-  var t = document.getElementById('ghToken').value;
-  if (!t){ alert('토큰을 입력해 주세요.'); return; }
-  google.script.run.withSuccessHandler(function(r){
-    if (r.ok){ alert('저장했습니다.'); document.getElementById('ghToken').value = '';
-      document.getElementById('settings').close(); loadDashboard(); }
-    else alert('저장하지 못했습니다.\n' + r.error);
-  }).api_saveGithubToken(t);
-}
-
-loadDashboard();
-</script>
 </body>
 </html>

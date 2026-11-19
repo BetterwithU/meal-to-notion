@@ -9,7 +9,7 @@
 function doGet() {
   return HtmlService.createTemplateFromFile('Index')
     .evaluate()
-    .setTitle('학사일정 관리 대시보드')
+    .setTitle('서울사대부중 통합 업무 관리자 콘솔')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
@@ -113,9 +113,8 @@ function notionAddSeedOption(seedName, config) {
 }
 
 // ===== 학사일정 =====
-// 일정이 있는 날만 기록된 DB이므로 별도 판정 속성은 두지 않는다.
-// 제목으로 성격을 짐작하되, 자동으로 적용하지 않고 화면에 보여주기만 한다.
-const EVENTS_DB_ID_DEFAULT = 'd62cd340-3dc3-83ff-9bfb-018d61fd3c8f';
+// 2027 주요 학사 일정 FINAL DB
+const EVENTS_DB_ID_DEFAULT = '82d2e612-fa98-823b-9c4e-011280e365af';
 
 // 수업이 없는 날로 보이는 일정 ('방학식'은 수업일이므로 제외)
 const RE_HOLIDAY = /(재량휴업|휴업일|대체\s*휴일|대체\s*공휴일|공휴일|추석|설\s*연휴|설날|한글날|개천절|광복절|삼일절|어린이날|현충일|성탄|신정)|방학(?!식)/;
@@ -474,7 +473,11 @@ function api_getSettings() {
   return {
     githubToken: mask(p.GITHUB_TOKEN),
     notionToken: mask(p.NOTION_TOKEN),
-    notionDbId: p.NOTION_DB_ID || '',
+    notionDbId: p.NOTION_DB_ID || DEFAULT_2027_CONFIG.NOTION_DB_ID,
+    eventsDbId: p.EVENTS_DB_ID || DEFAULT_2027_CONFIG.EVENTS_DB_ID,
+    weeklyDbId: p.WEEKLY_DB_ID || DEFAULT_2027_CONFIG.WEEKLY_DB_ID,
+    todoDbId: p.TODO_DB_ID || DEFAULT_2027_CONFIG.TODO_DB_ID,
+    mainPageId: p.MAIN_PAGE_ID || DEFAULT_2027_CONFIG.MAIN_PAGE_ID,
     seedProp: p.TIMETABLE_PROP_NAME || 'SEED',
     repo: GH_OWNER_REPO
   };
@@ -501,5 +504,576 @@ function api_saveGithubToken(token) {
   }
 
   PropertiesService.getScriptProperties().setProperty('GITHUB_TOKEN', token);
+  return { ok: true };
+}
+
+function api_saveNotionSettings(settings) {
+  if (!settings) return { ok: false, error: '설정값이 비어 있습니다.' };
+  const p = PropertiesService.getScriptProperties();
+  if (settings.notionToken) p.setProperty('NOTION_TOKEN', settings.notionToken.trim());
+  if (settings.notionDbId) p.setProperty('NOTION_DB_ID', settings.notionDbId.trim());
+  if (settings.eventsDbId) p.setProperty('EVENTS_DB_ID', settings.eventsDbId.trim());
+  if (settings.weeklyDbId) p.setProperty('WEEKLY_DB_ID', settings.weeklyDbId.trim());
+  if (settings.todoDbId) p.setProperty('TODO_DB_ID', settings.todoDbId.trim());
+  if (settings.mainPageId) p.setProperty('MAIN_PAGE_ID', settings.mainPageId.trim());
+  return { ok: true };
+}
+
+// =================================================================
+// 1. 주간 교육활동 계획 (AI 공문 파서 & 노션 DB 등록)
+// DB: 사대부중 주간/일간 교육활동계획 (5cd2e612-fa98-8379-a493-8164aaf73794)
+// =================================================================
+
+function api_parseNoticeText(text, targetYear) {
+  if (!text || !text.trim()) return { ok: false, error: '분석할 공문 텍스트를 입력해 주세요.' };
+  
+  targetYear = parseInt(targetYear, 10) || new Date().getFullYear();
+  if (targetYear < 2027) targetYear = 2027; // 2027년도 기본
+
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  const items = [];
+  const dateRegex = /(?:(\d{1,2})[\.\/\월\-\s]+(\d{1,2})일?)(?:\s*[\(（]([월화수목금토일])[\)）])?/;
+  const deptKeywords = [
+    '교무기획', '교무부', '학생인성안전', '학생인성', '인성부', '교육연구', '연구부',
+    '창의체험', '창체부', '과학정보', '정보부', '진로상담', '상담부', '환경복지',
+    '1학년', '2학년', '3학년', '전체', '교직원', '학부모'
+  ];
+
+  let lastFoundDate = null;
+  let lastDow = '';
+  let idCounter = 1;
+
+  lines.forEach(line => {
+    // 제목형 머리글/공지 안내줄 필터링
+    if (/^\[.*안내.*\]$|^주간.*계획$|^공문.*전달$|^\d+\.\s*주간\s*교육/i.test(line)) return;
+
+    const match = line.match(dateRegex);
+    let dateStr = lastFoundDate;
+    let dow = lastDow;
+
+    if (match) {
+      const m = parseInt(match[1], 10);
+      const d = parseInt(match[2], 10);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+        dateStr = `${targetYear}-${('0' + m).slice(-2)}-${('0' + d).slice(-2)}`;
+        dow = match[3] || ['일','월','화','수','목','금','토'][new Date(dateStr).getDay()];
+        lastFoundDate = dateStr;
+        lastDow = dow;
+      }
+    }
+
+    if (!dateStr) return;
+
+    // 본문에서 날짜 부분 제거
+    let cleaned = line.replace(dateRegex, '').replace(/^[-*•\d\.\)\s]+/, '').trim();
+    if (!cleaned) return;
+
+    // 부서/구분 감지
+    let dept = '교무기획';
+    for (let k = 0; k < deptKeywords.length; k++) {
+      if (line.indexOf(deptKeywords[k]) !== -1) {
+        dept = deptKeywords[k].replace(/부$/, '');
+        break;
+      }
+    }
+
+    // 시간 및 장소/세부내용 추출
+    let details = '';
+    const timeMatch = cleaned.match(/(\d{1,2}:\d{2}|\d+교시)/);
+    if (timeMatch) {
+      details = timeMatch[1];
+      cleaned = cleaned.replace(timeMatch[1], '').trim();
+    }
+
+    const parenMatch = cleaned.match(/[\(（]([^()（）]+)[\)）]/);
+    if (parenMatch) {
+      const extra = parenMatch[1].trim();
+      details = details ? (details + ' / ' + extra) : extra;
+      cleaned = cleaned.replace(/[\(（][^()（）]+[\)）]/, '').trim();
+    }
+
+    cleaned = cleaned.replace(/^[-:,\s]+|[-:,\s]+$/g, '').trim();
+    if (!cleaned && details) {
+      cleaned = details;
+      details = '';
+    }
+
+    if (cleaned) {
+      items.push({
+        id: 'parsed_' + idCounter++,
+        date: dateStr,
+        dow: dow,
+        title: cleaned,
+        category: dept,
+        details: details,
+        selected: true
+      });
+    }
+  });
+
+  return { ok: true, count: items.length, items: items };
+}
+
+function api_pushWeeklyActivities(items) {
+  if (!items || !items.length) return { ok: false, error: '전송할 항목이 선택되지 않았습니다.' };
+  const config = getConfig();
+  const dbId = config.WEEKLY_DB_ID || DEFAULT_2027_CONFIG.WEEKLY_DB_ID;
+  const schema = getNotionDbSchema(dbId, config);
+
+  const results = [];
+  let success = 0, fail = 0;
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (!item.title || !item.date) continue;
+    Utilities.sleep(API_DELAY);
+
+    const props = {};
+    props[schema.titleProp] = { title: [{ text: { content: item.title } }] };
+    props[schema.dateProp] = { date: { start: item.date } };
+
+    if (schema.selectProps && schema.selectProps.length > 0 && item.category) {
+      props[schema.selectProps[0]] = { select: { name: item.category } };
+    }
+    if (schema.richTextProps && schema.richTextProps.length > 0 && item.details) {
+      props[schema.richTextProps[0]] = { rich_text: [{ text: { content: item.details } }] };
+    }
+
+    const payload = {
+      parent: { database_id: dbId },
+      properties: props
+    };
+
+    try {
+      const res = UrlFetchApp.fetch('https://api.notion.com/v1/pages', {
+        method: 'post',
+        headers: {
+          'Authorization': `Bearer ${config.NOTION_TOKEN}`,
+          'Content-Type': 'application/json',
+          'Notion-Version': '2022-06-28'
+        },
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      });
+
+      if (res.getResponseCode() === 200) {
+        success++;
+        results.push({ title: item.title, date: item.date, ok: true });
+      } else {
+        fail++;
+        results.push({ title: item.title, date: item.date, ok: false, error: res.getContentText().substring(0, 150) });
+      }
+    } catch (e) {
+      fail++;
+      results.push({ title: item.title, date: item.date, ok: false, error: String(e) });
+    }
+  }
+
+  return { ok: true, success: success, fail: fail, results: results };
+}
+
+function api_getWeeklyActivities(yearMonth) {
+  const config = getConfig();
+  const dbId = config.WEEKLY_DB_ID || DEFAULT_2027_CONFIG.WEEKLY_DB_ID;
+  const schema = getNotionDbSchema(dbId, config);
+
+  yearMonth = yearMonth || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMM');
+  const year = parseInt(yearMonth.substring(0, 4), 10);
+  const month = parseInt(yearMonth.substring(4, 6), 10) - 1;
+  const first = Utilities.formatDate(new Date(year, month, 1), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const last = Utilities.formatDate(new Date(year, month + 1, 0), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+
+  const body = {
+    page_size: 100,
+    sorts: [{ property: schema.dateProp, direction: 'ascending' }],
+    filter: {
+      and: [
+        { property: schema.dateProp, date: { on_or_after: first } },
+        { property: schema.dateProp, date: { on_or_before: last } }
+      ]
+    }
+  };
+
+  try {
+    const res = UrlFetchApp.fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+      method: 'post',
+      headers: {
+        'Authorization': `Bearer ${config.NOTION_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      payload: JSON.stringify(body),
+      muteHttpExceptions: true
+    });
+
+    if (res.getResponseCode() !== 200) {
+      return { ok: false, error: `조회 실패 (${res.getResponseCode()}): ${res.getContentText().substring(0, 150)}` };
+    }
+
+    const json = JSON.parse(res.getContentText());
+    const items = (json.results || []).map(p => {
+      const d = p.properties[schema.dateProp]?.date?.start || '';
+      const t = (p.properties[schema.titleProp]?.title || []).map(x => x.plain_text).join('');
+      let cat = '';
+      if (schema.selectProps && schema.selectProps.length > 0) {
+        cat = p.properties[schema.selectProps[0]]?.select?.name || '';
+      }
+      let det = '';
+      if (schema.richTextProps && schema.richTextProps.length > 0) {
+        det = (p.properties[schema.richTextProps[0]]?.rich_text || []).map(x => x.plain_text).join('');
+      }
+      return { id: p.id, date: d, title: t, category: cat, details: det };
+    });
+
+    return { ok: true, items: items };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+// =================================================================
+// 2. 단축수업 & 긴급공지 배너 원격 제어
+// Page: 2027 메인 베이스캠프 (91d2e612-fa98-824b-8469-813a222ad032)
+// =================================================================
+
+function api_updateEmergencyBanner(payload) {
+  const config = getConfig();
+  const pageId = config.MAIN_PAGE_ID || DEFAULT_2027_CONFIG.MAIN_PAGE_ID;
+
+  const title = payload.title || '정상 일과 운영 중';
+  const details = payload.details || '';
+  const color = payload.color || 'blue_background';
+  const emoji = payload.emoji || '🔔';
+
+  try {
+    const blocksRes = UrlFetchApp.fetch(`https://api.notion.com/v1/blocks/${pageId}/children?page_size=30`, {
+      headers: {
+        'Authorization': `Bearer ${config.NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28'
+      },
+      muteHttpExceptions: true
+    });
+
+    if (blocksRes.getResponseCode() !== 200) {
+      return { ok: false, error: `메인 페이지 블록 조회 실패 (${blocksRes.getResponseCode()})` };
+    }
+
+    const blocks = JSON.parse(blocksRes.getContentText()).results || [];
+    const callout = blocks.find(b => b.type === 'callout');
+
+    const richText = [
+      { type: 'text', text: { content: `${emoji} ${title}` }, annotations: { bold: true } }
+    ];
+    if (details) {
+      richText.push({ type: 'text', text: { content: `\n${details}` } });
+    }
+
+    const calloutPayload = {
+      callout: {
+        rich_text: richText,
+        icon: { emoji: emoji },
+        color: color
+      }
+    };
+
+    if (callout) {
+      const patchRes = UrlFetchApp.fetch(`https://api.notion.com/v1/blocks/${callout.id}`, {
+        method: 'patch',
+        headers: {
+          'Authorization': `Bearer ${config.NOTION_TOKEN}`,
+          'Content-Type': 'application/json',
+          'Notion-Version': '2022-06-28'
+        },
+        payload: JSON.stringify(calloutPayload),
+        muteHttpExceptions: true
+      });
+      if (patchRes.getResponseCode() === 200) {
+        PropertiesService.getScriptProperties().setProperty('SAVED_BANNER_STATE', JSON.stringify(payload));
+        return { ok: true, updated: true, blockId: callout.id };
+      }
+      return { ok: false, error: `콜아웃 갱신 실패 (${patchRes.getResponseCode()})` };
+    } else {
+      const appendRes = UrlFetchApp.fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
+        method: 'patch',
+        headers: {
+          'Authorization': `Bearer ${config.NOTION_TOKEN}`,
+          'Content-Type': 'application/json',
+          'Notion-Version': '2022-06-28'
+        },
+        payload: JSON.stringify({ children: [{ object: 'block', type: 'callout', ...calloutPayload }] }),
+        muteHttpExceptions: true
+      });
+      if (appendRes.getResponseCode() === 200) {
+        PropertiesService.getScriptProperties().setProperty('SAVED_BANNER_STATE', JSON.stringify(payload));
+        return { ok: true, created: true };
+      }
+      return { ok: false, error: `콜아웃 생성 실패: ${appendRes.getContentText()}` };
+    }
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+function api_getBannerStatus() {
+  const saved = PropertiesService.getScriptProperties().getProperty('SAVED_BANNER_STATE');
+  if (saved) {
+    try { return { ok: true, banner: JSON.parse(saved) }; } catch (e) {}
+  }
+  return {
+    ok: true,
+    banner: {
+      mode: 'normal',
+      title: '정상 수업 일과 운영 (전 교시 45분)',
+      details: '점심시간 12:30 ~ 13:30 · 특이사항 없음',
+      color: 'blue_background',
+      emoji: '🔔'
+    }
+  };
+}
+
+// =================================================================
+// 3. 교직원 To-Do 관리
+// DB: 오늘의 할일 To-Do (70c2e612-fa98-830b-a757-818914c4bd9c)
+// =================================================================
+
+function api_getTodoList() {
+  const config = getConfig();
+  const dbId = config.TODO_DB_ID || DEFAULT_2027_CONFIG.TODO_DB_ID;
+  const schema = getNotionDbSchema(dbId, config);
+
+  try {
+    const res = UrlFetchApp.fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+      method: 'post',
+      headers: {
+        'Authorization': `Bearer ${config.NOTION_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      payload: JSON.stringify({
+        page_size: 40,
+        sorts: [{ property: schema.dateProp, direction: 'ascending' }]
+      }),
+      muteHttpExceptions: true
+    });
+
+    if (res.getResponseCode() !== 200) {
+      return { ok: false, error: `To-Do 조회 실패 (${res.getResponseCode()})` };
+    }
+
+    const json = JSON.parse(res.getContentText());
+    const todos = (json.results || []).map(p => {
+      const title = (p.properties[schema.titleProp]?.title || []).map(x => x.plain_text).join('');
+      const date = p.properties[schema.dateProp]?.date?.start || '';
+      const done = !!(p.properties[schema.checkboxProp]?.checkbox);
+      let dept = '';
+      if (schema.selectProps && schema.selectProps.length > 0) {
+        dept = p.properties[schema.selectProps[0]]?.select?.name || '';
+      }
+      return { id: p.id, title: title, dueDate: date, done: done, dept: dept };
+    });
+
+    return { ok: true, todos: todos };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+function api_addTodo(payload) {
+  if (!payload || !payload.title) return { ok: false, error: '할 일 제목을 입력해 주세요.' };
+  const config = getConfig();
+  const dbId = config.TODO_DB_ID || DEFAULT_2027_CONFIG.TODO_DB_ID;
+  const schema = getNotionDbSchema(dbId, config);
+
+  const props = {};
+  props[schema.titleProp] = { title: [{ text: { content: payload.title } }] };
+  if (payload.dueDate) {
+    props[schema.dateProp] = { date: { start: payload.dueDate } };
+  }
+  if (schema.checkboxProp) {
+    props[schema.checkboxProp] = { checkbox: false };
+  }
+  if (schema.selectProps && schema.selectProps.length > 0 && payload.dept) {
+    props[schema.selectProps[0]] = { select: { name: payload.dept } };
+  }
+
+  try {
+    const res = UrlFetchApp.fetch('https://api.notion.com/v1/pages', {
+      method: 'post',
+      headers: {
+        'Authorization': `Bearer ${config.NOTION_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      payload: JSON.stringify({ parent: { database_id: dbId }, properties: props }),
+      muteHttpExceptions: true
+    });
+    if (res.getResponseCode() === 200) return { ok: true, id: JSON.parse(res.getContentText()).id };
+    return { ok: false, error: `To-Do 등록 실패: ${res.getContentText().substring(0, 150)}` };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+function api_toggleTodo(pageId, completed) {
+  const config = getConfig();
+  const dbId = config.TODO_DB_ID || DEFAULT_2027_CONFIG.TODO_DB_ID;
+  const schema = getNotionDbSchema(dbId, config);
+
+  const props = {};
+  props[schema.checkboxProp] = { checkbox: !!completed };
+
+  try {
+    const res = UrlFetchApp.fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+      method: 'patch',
+      headers: {
+        'Authorization': `Bearer ${config.NOTION_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      payload: JSON.stringify({ properties: props }),
+      muteHttpExceptions: true
+    });
+    return { ok: res.getResponseCode() === 200 };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+// =================================================================
+// 4. 학사일정 마스터 (조회 & 추가 & 삭제)
+// DB: 주요 학사 일정 FINAL (82d2e612-fa98-823b-9c4e-011280e365af)
+// =================================================================
+
+function api_getSchoolEventsList(yearMonth) {
+  const config = getConfig();
+  const dbId = eventsDbId();
+  const schema = getNotionDbSchema(dbId, config);
+
+  yearMonth = yearMonth || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMM');
+  const year = parseInt(yearMonth.substring(0, 4), 10);
+  const month = parseInt(yearMonth.substring(4, 6), 10) - 1;
+  const first = Utilities.formatDate(new Date(year, month - 1, 1), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const last = Utilities.formatDate(new Date(year, month + 2, 0), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+
+  try {
+    const res = UrlFetchApp.fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+      method: 'post',
+      headers: {
+        'Authorization': `Bearer ${config.NOTION_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      payload: JSON.stringify({
+        page_size: 100,
+        sorts: [{ property: schema.dateProp, direction: 'ascending' }],
+        filter: {
+          and: [
+            { property: schema.dateProp, date: { on_or_after: first } },
+            { property: schema.dateProp, date: { on_or_before: last } }
+          ]
+        }
+      }),
+      muteHttpExceptions: true
+    });
+
+    if (res.getResponseCode() !== 200) return { ok: false, error: '학사일정 조회 실패' };
+
+    const json = JSON.parse(res.getContentText());
+    const events = (json.results || []).map(p => {
+      const title = (p.properties[schema.titleProp]?.title || []).map(x => x.plain_text).join('');
+      const dateObj = p.properties[schema.dateProp]?.date || {};
+      return {
+        id: p.id,
+        name: title,
+        start: dateObj.start || '',
+        end: dateObj.end || '',
+        holiday: RE_HOLIDAY.test(title),
+        timetable: RE_TIMETABLE.test(title)
+      };
+    });
+
+    return { ok: true, events: events };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+function api_addSchoolEvent(payload) {
+  if (!payload || !payload.name || !payload.startDate) {
+    return { ok: false, error: '일정 이름과 시작일을 입력해 주세요.' };
+  }
+  const config = getConfig();
+  const dbId = eventsDbId();
+  const schema = getNotionDbSchema(dbId, config);
+
+  const datePayload = { start: payload.startDate };
+  if (payload.endDate && payload.endDate !== payload.startDate) {
+    datePayload.end = payload.endDate;
+  }
+
+  const props = {};
+  props[schema.titleProp] = { title: [{ text: { content: payload.name } }] };
+  props[schema.dateProp] = { date: datePayload };
+
+  try {
+    const res = UrlFetchApp.fetch('https://api.notion.com/v1/pages', {
+      method: 'post',
+      headers: {
+        'Authorization': `Bearer ${config.NOTION_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      payload: JSON.stringify({ parent: { database_id: dbId }, properties: props }),
+      muteHttpExceptions: true
+    });
+    return { ok: res.getResponseCode() === 200 };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+function api_deleteSchoolEvent(pageId) {
+  const config = getConfig();
+  try {
+    const res = UrlFetchApp.fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+      method: 'patch',
+      headers: {
+        'Authorization': `Bearer ${config.NOTION_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      payload: JSON.stringify({ archived: true }),
+      muteHttpExceptions: true
+    });
+    return { ok: res.getResponseCode() === 200 };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+// =================================================================
+// 5. 2027 링크 마스터 관리 (구글 시트 6종 원스톱)
+// =================================================================
+
+const DEFAULT_MASTER_LINKS = [
+  { id: 'afterschool_all', name: '방과후학교 출석부 (통합)', url: 'https://docs.google.com/spreadsheets/d/1XlR_nOwt-H78Fz1...', dept: '방과후학교부' },
+  { id: 'afterschool_tch', name: '방과후학교 학생출석부 (강사용)', url: 'https://docs.google.com/spreadsheets/d/1B0qXp7z8uJmG9_K...', dept: '방과후학교부' },
+  { id: 'emergency_contacts', name: '교직원 비상연락망 및 좌석표', url: 'https://docs.google.com/spreadsheets/d/1HkR4_5g9aL-8v7m...', dept: '교무기획부' },
+  { id: 'timetable_sheet', name: '2027 1학기 시간표 (최종)', url: 'https://docs.google.com/spreadsheets/d/1Z8jM9x_k4L3w7n9...', dept: '교무기획부' },
+  { id: 'club_attendance', name: '자율동아리 출석부', url: 'https://docs.google.com/spreadsheets/d/1W5qN4mP8sK_7lR3...', dept: '창의체험부' },
+  { id: 'device_repair', name: '정보화기기/방송 수리요청', url: 'https://docs.google.com/spreadsheets/d/1QX5p3Yg0FXiVVir...', dept: '과학정보부' }
+];
+
+function api_getMasterLinks() {
+  const saved = PropertiesService.getScriptProperties().getProperty('MASTER_LINKS_2027');
+  if (saved) {
+    try { return { ok: true, links: JSON.parse(saved) }; } catch (e) {}
+  }
+  return { ok: true, links: DEFAULT_MASTER_LINKS };
+}
+
+function api_saveMasterLinks(links) {
+  if (!links) return { ok: false, error: '링크 데이터가 없습니다.' };
+  PropertiesService.getScriptProperties().setProperty('MASTER_LINKS_2027', JSON.stringify(links));
   return { ok: true };
 }
