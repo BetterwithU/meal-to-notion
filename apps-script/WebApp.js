@@ -6,10 +6,17 @@
  */
 
 // ===== 진입점 =====
-function doGet() {
+function doGet(e) {
+  var view = (e && e.parameter && e.parameter.view) ? e.parameter.view.toLowerCase() : 'portal';
+  if (view === 'admin') {
+    return HtmlService.createTemplateFromFile('Admin')
+      .evaluate()
+      .setTitle('서울사대부중 통합 업무 관리자 콘솔')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
   return HtmlService.createTemplateFromFile('Index')
     .evaluate()
-    .setTitle('서울사대부중 통합 업무 관리자 콘솔')
+    .setTitle('2027 서울사대부중 베이스캠프')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
@@ -528,7 +535,6 @@ function api_parseNoticeText(text, targetYear) {
   if (!text || !text.trim()) return { ok: false, error: '분석할 공문 텍스트를 입력해 주세요.' };
   
   targetYear = parseInt(targetYear, 10) || new Date().getFullYear();
-  if (targetYear < 2027) targetYear = 2027; // 2027년도 기본
 
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
   const items = [];
@@ -1077,3 +1083,47 @@ function api_saveMasterLinks(links) {
   PropertiesService.getScriptProperties().setProperty('MASTER_LINKS_2027', JSON.stringify(links));
   return { ok: true };
 }
+
+// =================================================================
+// 6. 컴시간알리미 실시간 연동 API (2027 베이스캠프 자체 엔진)
+// =================================================================
+
+function api_getComciganTimetable(grade, classNum) {
+  try {
+    var g = Number(grade) || 1;
+    var c = Number(classNum) || 1;
+    return getComciganClassTimetable(g, c);
+  } catch (err) {
+    Logger.log('api_getComciganTimetable error: ' + err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
+function api_getComciganTeacherTimetable(teacherName) {
+  try {
+    if (!teacherName) return { ok: false, error: '교사 성명을 입력하세요.' };
+    return getComciganTeacherTimetable(teacherName);
+  } catch (err) {
+    Logger.log('api_getComciganTeacherTimetable error: ' + err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
+function api_getComciganMeta() {
+  try {
+    return getComciganMeta();
+  } catch (err) {
+    Logger.log('api_getComciganMeta error: ' + err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
+function api_refreshComciganData() {
+  try {
+    getComciganRawData(true);
+    return { ok: true, message: '컴시간알리미 최신 시간표를 새로고침했습니다.' };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+

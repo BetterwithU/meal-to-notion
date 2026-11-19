@@ -360,6 +360,100 @@
       gap: 8px;
     }
 
+    /* 시간표 네비게이션 & 듀얼 뷰 */
+    .timetable-view-tabs {
+      display: inline-flex;
+      background: var(--surface-sub);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 2px;
+    }
+    .tt-view-tab {
+      border: none;
+      background: transparent;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-sub);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+    .tt-view-tab.active {
+      background: #fff;
+      color: var(--snu-blue);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+    .dual-split-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 960px) {
+      .dual-split-wrap {
+        grid-template-columns: 1fr;
+      }
+    }
+    .dual-split-wrap .timetable-timeline {
+      gap: 4px;
+    }
+    .dual-split-wrap .period-block {
+      padding: 6px 3px;
+      gap: 2px;
+    }
+    .dual-split-wrap .period-num {
+      font-size: 9.5px;
+    }
+    .dual-split-wrap .period-subject {
+      font-size: 11.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .dual-split-wrap .period-room {
+      font-size: 9.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .dual-split-wrap .period-badge-sub {
+      font-size: 8px;
+      padding: 1px 3px;
+    }
+    .period-block.empty {
+      background: #fdfdfc;
+      border-color: #f1f5f9;
+      color: var(--text-muted);
+    }
+    .period-block.empty .period-subject {
+      color: #94a3b8;
+      font-weight: 500;
+      font-size: 11.5px;
+    }
+    .sub-pane {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+    }
+    .sub-pane-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .sub-pane-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
     .period-block {
       background: #fafaf9;
       border: 1px solid var(--border);
@@ -793,54 +887,94 @@
           <!-- Hero Split: [오늘 시간표 (60%)] + [오늘 급식 (40%)] -->
           <div class="hero-split-grid">
             
-            <!-- 카드 1: 오늘 시간표 -->
+            <!-- 카드 1: 스마트 시간표 허브 (컴시간알리미 실시간 연동) -->
             <div class="clean-card" id="widgetTimetable">
-              <div class="clean-card-header">
+              <div class="clean-card-header" style="flex-wrap: wrap; gap: 8px;">
                 <div class="card-title-group">
-                  <div class="card-title">오늘 시간표</div>
-                  <div class="card-meta-desc">목요일 7교시 일과표</div>
+                  <div class="card-title" style="display:flex; align-items:center; gap:6px;">
+                    오늘 시간표
+                    <span id="ttLiveBadge" style="font-size:10px; font-weight:700; background:#dbeafe; color:#1e40af; padding:1px 6px; border-radius:4px;">컴시간 실시간</span>
+                  </div>
+                  <div class="card-meta-desc" id="ttMetaDesc">서울사대부중 맞춤형 시간표 허브</div>
                 </div>
-                <button class="card-action-btn" onclick="alert('전체 주간 시간표 팝업')">주간 시간표</button>
+
+                <!-- 뷰 모드 토글: [내 수업] [학급] [동시 나란히 비교] -->
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <div class="timetable-view-tabs">
+                    <button class="tt-view-tab" id="btnViewTeacher" onclick="switchTimetableView('teacher')">내 수업</button>
+                    <button class="tt-view-tab" id="btnViewClass" onclick="switchTimetableView('class')">학급</button>
+                    <button class="tt-view-tab active" id="btnViewDual" onclick="switchTimetableView('dual')">나란히 비교</button>
+                  </div>
+                  <button class="card-action-btn" onclick="openWeeklyModal()" style="font-size:11px; padding:3px 8px;">주간</button>
+                  <button class="card-action-btn" onclick="refreshComciganTimetable()" title="컴시간알리미 새로고침" style="font-size:11px; padding:3px 8px;">↻</button>
+                </div>
               </div>
 
-              <div class="timetable-timeline">
-                <div class="period-block">
-                  <span class="period-num">1교시</span>
-                  <span class="period-subject">3-1 수학</span>
-                  <span class="period-room">수학1실</span>
+              <!-- 뷰 1: 단일 교사별 시간표 -->
+              <div id="paneTeacherSingle" style="display:none; padding-top:4px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; background:#f8fafc; padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border);">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:12.5px; font-weight:700; color:var(--text-main);">👨‍🏫 교사 선택</span>
+                    <select id="singleTeacherSelect" onchange="onSingleTeacherChange()" style="padding:4px 8px; font-size:12px; font-weight:600; border:1px solid var(--border); border-radius:4px; background:#fff; cursor:pointer;">
+                      <option value="">교사 목록 불러오는 중...</option>
+                    </select>
+                    <button class="card-action-btn" onclick="resetToMyTeacher()" style="padding:3px 8px; font-size:11px;">↺ 내 시간표로</button>
+                  </div>
+                  <span id="singleTeacherMeta" style="font-size:11.5px; color:var(--text-sub);"></span>
                 </div>
-                <div class="period-block">
-                  <span class="period-num">2교시</span>
-                  <span class="period-subject">3-3 수학</span>
-                  <span class="period-room">수학1실</span>
+                <div class="timetable-timeline" id="singleTeacherTimeline"></div>
+              </div>
+
+              <!-- 뷰 2: 단일 학급별 시간표 -->
+              <div id="paneClassSingle" style="display:none; padding-top:4px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; background:#f8fafc; padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border);">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:12.5px; font-weight:700; color:var(--text-main);">🏫 학급 선택</span>
+                    <select id="singleClassSelect" onchange="onSingleClassChange()" style="padding:4px 8px; font-size:12px; font-weight:600; border:1px solid var(--border); border-radius:4px; background:#fff; cursor:pointer;">
+                      <option value="">학급 목록 불러오는 중...</option>
+                    </select>
+                    <button class="card-action-btn" onclick="resetToMyClass()" style="padding:3px 8px; font-size:11px;">↺ 우리 반으로</button>
+                  </div>
+                  <span id="singleClassMeta" style="font-size:11.5px; color:var(--text-sub);"></span>
                 </div>
-                <div class="period-block">
-                  <span class="period-num">3교시</span>
-                  <span class="period-subject">공강</span>
-                  <span class="period-room">교재연구</span>
-                </div>
-                <div class="period-block current">
-                  <span class="period-num">4교시 (현재)</span>
-                  <span class="period-subject">2-4 수학</span>
-                  <span class="period-room">수학2실</span>
-                </div>
-                <div class="period-block substitute">
-                  <span class="period-num">5교시</span>
-                  <span class="period-subject">3-2 보강</span>
-                  <span class="period-room">3-2교실</span>
-                  <span class="period-badge-sub">보강</span>
-                </div>
-                <div class="period-block">
-                  <span class="period-num">6교시</span>
-                  <span class="period-subject">동아리</span>
-                  <span class="period-room">특별실</span>
-                </div>
-                <div class="period-block">
-                  <span class="period-num">7교시</span>
-                  <span class="period-subject">학급자치</span>
-                  <span class="period-room">본관</span>
+                <div class="timetable-timeline" id="singleClassTimeline"></div>
+              </div>
+
+              <!-- 뷰 3: [내 수업] + [우리 반] 동시 나란히 비교 (담임 추천 기본) -->
+              <div id="paneDual" style="display:block; padding-top:4px;">
+                <div class="dual-split-wrap">
+                  
+                  <!-- 좌측: 내 수업 시간표 -->
+                  <div class="sub-pane">
+                    <div class="sub-pane-head">
+                      <div class="sub-pane-title">
+                        👨‍🏫 교사
+                        <select id="dualTeacherSelect" onchange="onDualTeacherChange()" style="margin-left:4px; padding:2px 6px; font-size:11.5px; font-weight:600; border:1px solid var(--border); border-radius:4px; background:#fff;">
+                          <option value="">불러오는 중...</option>
+                        </select>
+                      </div>
+                      <button class="card-action-btn" onclick="resetToMyTeacher()" style="padding:2px 6px; font-size:10.5px;">↺ 나</button>
+                    </div>
+                    <div class="timetable-timeline" id="dualTeacherTimeline" style="gap:4px;"></div>
+                  </div>
+
+                  <!-- 우측: 우리 반 학급 시간표 -->
+                  <div class="sub-pane">
+                    <div class="sub-pane-head">
+                      <div class="sub-pane-title">
+                        🏫 학급
+                        <select id="dualClassSelect" onchange="onDualClassChange()" style="margin-left:4px; padding:2px 6px; font-size:11.5px; font-weight:600; border:1px solid var(--border); border-radius:4px; background:#fff;">
+                          <option value="">불러오는 중...</option>
+                        </select>
+                      </div>
+                      <button class="card-action-btn" onclick="resetToMyClass()" style="padding:2px 6px; font-size:10.5px;">↺ 반</button>
+                    </div>
+                    <div class="timetable-timeline" id="dualClassTimeline" style="gap:4px;"></div>
+                  </div>
+
                 </div>
               </div>
+
             </div>
 
             <!-- 카드 2: 오늘 급식 -->
@@ -995,32 +1129,35 @@
             <div class="clean-card" id="widgetCalendar">
               <div class="clean-card-header">
                 <div class="card-title-group">
-                  <div class="card-title">학사일정 캘린더</div>
-                  <div class="card-meta-desc">11월 17일 ~ 11월 21일</div>
+                  <div class="card-title" style="display:flex; align-items:center; gap:6px;">
+                    학사일정 캘린더
+                    <span style="font-size:10px; font-weight:700; background:#dcfce7; color:#15803d; padding:1px 6px; border-radius:4px;">노션 DB 연동</span>
+                  </div>
+                  <div class="card-meta-desc" id="calMetaDesc">11월 16일 ~ 11월 20일 주간 학사일정</div>
                 </div>
-                <button class="card-action-btn" onclick="alert('연간 학사일정 전체보기')">연간 일정</button>
+                <button class="card-action-btn" onclick="openAllEventsModal()">주요 일정</button>
               </div>
 
-              <div class="schedule-week-strip">
+              <div class="schedule-week-strip" id="calendarWeekStrip">
                 <div class="schedule-day-cell">
-                  <div class="day-header"><span>월</span><span>17</span></div>
+                  <div class="day-header"><span>월</span><span>16</span></div>
                   <div class="day-event">학부모상담주간 시작</div>
                 </div>
                 <div class="schedule-day-cell">
-                  <div class="day-header"><span>화</span><span>18</span></div>
+                  <div class="day-header"><span>화</span><span>17</span></div>
+                  <div class="day-event">1학년 진로체험의 날</div>
+                </div>
+                <div class="schedule-day-cell">
+                  <div class="day-header"><span>수</span><span>18</span></div>
                   <div class="day-event">민방위훈련 (3교시)</div>
                 </div>
-                <div class="schedule-day-cell">
-                  <div class="day-header"><span>수</span><span>19</span></div>
-                  <div class="day-event">교직원 연수</div>
-                </div>
                 <div class="schedule-day-cell today">
-                  <div class="day-header"><span>목 (오늘)</span><span class="tabular">20</span></div>
-                  <div class="day-event">2차 지필 출제마감</div>
+                  <div class="day-header"><span>목 (오늘)</span><span class="tabular">19</span></div>
+                  <div class="day-event">대학수학능력시험일</div>
                 </div>
                 <div class="schedule-day-cell">
-                  <div class="day-header"><span>금</span><span>21</span></div>
-                  <div class="day-event">학부모상담주간 종료</div>
+                  <div class="day-header"><span>금</span><span>20</span></div>
+                  <div class="day-event">2차 지필 출제마감</div>
                 </div>
               </div>
             </div>
@@ -1153,7 +1290,586 @@
         alert('사무인수인계서 출력기를 새 창에서 실행합니다.');
       }
     }
+
+    // ===== 컴시간알리미 & 스마트 시간표 허브 =====
+    let comciganMeta = null;
+    let currentTimetableView = 'dual'; // 'teacher' | 'class' | 'dual'
+    let myTeacherName = '이현*'; // 기본 로그인 교사 앵커 (1학년 8반 담임 국어A)
+    let myHomeroomClass = '1-8'; // 기본 학급 앵커
+    let selectedTeacherName = myTeacherName;
+    let selectedGrade = 1;
+    let selectedClassNum = 8;
+    let currentTeacherData = null;
+    let currentClassData = null;
+    let currentWeeklyModalTab = 'teacher';
+
+    // 1. 뷰 모드 전환 ([내 수업], [학급], [나란히 비교])
+    function switchTimetableView(view) {
+      currentTimetableView = view;
+      const btnTeacher = document.getElementById('btnViewTeacher');
+      const btnClass = document.getElementById('btnViewClass');
+      const btnDual = document.getElementById('btnViewDual');
+
+      const paneTeacher = document.getElementById('paneTeacherSingle');
+      const paneClass = document.getElementById('paneClassSingle');
+      const paneDual = document.getElementById('paneDual');
+
+      btnTeacher.classList.toggle('active', view === 'teacher');
+      btnClass.classList.toggle('active', view === 'class');
+      btnDual.classList.toggle('active', view === 'dual');
+
+      paneTeacher.style.display = (view === 'teacher') ? 'block' : 'none';
+      paneClass.style.display = (view === 'class') ? 'block' : 'none';
+      paneDual.style.display = (view === 'dual') ? 'block' : 'none';
+
+      // 렌더링 갱신
+      if (view === 'teacher' && currentTeacherData) {
+        renderTeacherTimeline(currentTeacherData, 'singleTeacherTimeline', false);
+      } else if (view === 'class' && currentClassData) {
+        renderClassTimeline(currentClassData, 'singleClassTimeline', false);
+      } else if (view === 'dual') {
+        if (currentTeacherData) renderTeacherTimeline(currentTeacherData, 'dualTeacherTimeline', true);
+        if (currentClassData) renderClassTimeline(currentClassData, 'dualClassTimeline', true);
+      }
+    }
+
+    // 2. 메타데이터 (59명 교사, 24개 학급, 담임 배정표) 로드
+    function loadComciganMeta() {
+      const metaDesc = document.getElementById('ttMetaDesc');
+      if (metaDesc) metaDesc.innerText = '컴시간알리미 실시간 교사·학급 정보 불러오는 중...';
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(onMetaLoaded)
+          .withFailureHandler(onTimetableError)
+          .api_getComciganMeta();
+      } else {
+        fetch('/api/comcigan/meta')
+          .then(res => res.json())
+          .then(data => onMetaLoaded(data))
+          .catch(err => {
+            console.warn('Local meta fetch failed, using fallback:', err);
+            onMetaLoaded(getFallbackMeta());
+          });
+      }
+    }
+
+    function onMetaLoaded(res) {
+      if (!res || !res.teachers) return;
+      comciganMeta = res;
+
+      // 담임 매핑 파악
+      const hrMap = res.homeroomMap || {};
+      
+      // 교사 드롭다운 생성 (59명 전체)
+      const tOpts = res.teachers.map(t => {
+        const hrClass = Object.keys(hrMap).find(k => hrMap[k] === t.name);
+        const tag = hrClass ? ` (${hrClass} 담임)` : '';
+        return `<option value="${t.name}">${t.name} 선생님${tag}</option>`;
+      }).join('');
+
+      const sTeacher = document.getElementById('singleTeacherSelect');
+      const dTeacher = document.getElementById('dualTeacherSelect');
+      if (sTeacher) sTeacher.innerHTML = tOpts;
+      if (dTeacher) dTeacher.innerHTML = tOpts;
+
+      // 학급 드롭다운 생성 (24개 반 전체: 1-1 ~ 3-8)
+      const cOpts = res.classes.map(c => {
+        const hrTeacher = hrMap[`${c.grade}-${c.classNum}`] || '';
+        const tag = hrTeacher ? ` (${hrTeacher}T)` : '';
+        return `<option value="${c.grade}-${c.classNum}">${c.grade}학년 ${c.classNum}반${tag}</option>`;
+      }).join('');
+
+      const sClass = document.getElementById('singleClassSelect');
+      const dClass = document.getElementById('dualClassSelect');
+      if (sClass) sClass.innerHTML = cOpts;
+      if (dClass) dClass.innerHTML = cOpts;
+
+      // 초기 선택값 적용
+      if (sTeacher) sTeacher.value = selectedTeacherName;
+      if (dTeacher) dTeacher.value = selectedTeacherName;
+      if (sClass) sClass.value = `${selectedGrade}-${selectedClassNum}`;
+      if (dClass) dClass.value = `${selectedGrade}-${selectedClassNum}`;
+
+      const metaDesc = document.getElementById('ttMetaDesc');
+      if (metaDesc) metaDesc.innerText = '서울사대부중 맞춤형 시간표 허브 (실시간)';
+
+      // 교사 및 학급 시간표 동시 조회
+      loadTeacherTimetable(selectedTeacherName);
+      loadClassTimetable(selectedGrade, selectedClassNum);
+    }
+
+    // 3. 교사 시간표 조회
+    function loadTeacherTimetable(teacherName) {
+      const sMeta = document.getElementById('singleTeacherMeta');
+      if (sMeta) sMeta.innerText = `${teacherName} 선생님 수업 조회 중...`;
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(onTeacherTimetableLoaded)
+          .withFailureHandler(onTimetableError)
+          .api_getComciganTeacherTimetable(teacherName);
+      } else {
+        fetch(`/api/comcigan/teacher?name=${encodeURIComponent(teacherName)}`)
+          .then(res => res.json())
+          .then(data => onTeacherTimetableLoaded(data))
+          .catch(err => {
+            console.warn('Teacher timetable fetch failed:', err);
+          });
+      }
+    }
+
+    function onTeacherTimetableLoaded(res) {
+      if (!res || !res.ok) return;
+      currentTeacherData = res;
+
+      const dayNames = ['', '월', '화', '수', '목', '금'];
+      const todayDay = res.dayOfWeek || 1;
+      const todayName = dayNames[todayDay] || '오늘';
+
+      const sMeta = document.getElementById('singleTeacherMeta');
+      if (sMeta) sMeta.innerText = `${res.teacherName} 선생님 · ${todayName}요일 수업 편성 (${res.weekStart} 주간)`;
+
+      renderTeacherTimeline(res, 'singleTeacherTimeline', false);
+      renderTeacherTimeline(res, 'dualTeacherTimeline', true);
+    }
+
+    // 4. 학급 시간표 조회
+    function loadClassTimetable(grade, classNum) {
+      const sMeta = document.getElementById('singleClassMeta');
+      if (sMeta) sMeta.innerText = `${grade}학년 ${classNum}반 시간표 조회 중...`;
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(onClassTimetableLoaded)
+          .withFailureHandler(onTimetableError)
+          .api_getComciganTimetable(grade, classNum);
+      } else {
+        fetch(`/api/comcigan?grade=${grade}&class=${classNum}`)
+          .then(res => res.json())
+          .then(data => onClassTimetableLoaded(data))
+          .catch(err => {
+            console.warn('Class timetable fetch failed:', err);
+          });
+      }
+    }
+
+    function onClassTimetableLoaded(res) {
+      if (!res || !res.ok) return;
+      currentClassData = res;
+
+      const dayNames = ['', '월', '화', '수', '목', '금'];
+      const todayDay = res.dayOfWeek || 1;
+      const todayName = dayNames[todayDay] || '오늘';
+
+      const sMeta = document.getElementById('singleClassMeta');
+      if (sMeta) sMeta.innerText = `${res.grade}학년 ${res.classNum}반 · ${todayName}요일 시간표 (${res.weekStart} 주간)`;
+
+      renderClassTimeline(res, 'singleClassTimeline', false);
+      renderClassTimeline(res, 'dualClassTimeline', true);
+    }
+
+    // 5. 드롭다운 변경 & 리셋 핸들러
+    function onSingleTeacherChange() {
+      const val = document.getElementById('singleTeacherSelect').value;
+      selectedTeacherName = val;
+      const dSel = document.getElementById('dualTeacherSelect');
+      if (dSel) dSel.value = val;
+      loadTeacherTimetable(val);
+    }
+
+    function onDualTeacherChange() {
+      const val = document.getElementById('dualTeacherSelect').value;
+      selectedTeacherName = val;
+      const sSel = document.getElementById('singleTeacherSelect');
+      if (sSel) sSel.value = val;
+      loadTeacherTimetable(val);
+    }
+
+    function onSingleClassChange() {
+      const val = document.getElementById('singleClassSelect').value;
+      const parts = val.split('-');
+      selectedGrade = Number(parts[0]) || 1;
+      selectedClassNum = Number(parts[1]) || 1;
+      const dSel = document.getElementById('dualClassSelect');
+      if (dSel) dSel.value = val;
+      loadClassTimetable(selectedGrade, selectedClassNum);
+    }
+
+    function onDualClassChange() {
+      const val = document.getElementById('dualClassSelect').value;
+      const parts = val.split('-');
+      selectedGrade = Number(parts[0]) || 1;
+      selectedClassNum = Number(parts[1]) || 1;
+      const sSel = document.getElementById('singleClassSelect');
+      if (sSel) sSel.value = val;
+      loadClassTimetable(selectedGrade, selectedClassNum);
+    }
+
+    function resetToMyTeacher() {
+      selectedTeacherName = myTeacherName;
+      const sSel = document.getElementById('singleTeacherSelect');
+      const dSel = document.getElementById('dualTeacherSelect');
+      if (sSel) sSel.value = myTeacherName;
+      if (dSel) dSel.value = myTeacherName;
+      loadTeacherTimetable(myTeacherName);
+    }
+
+    function resetToMyClass() {
+      const parts = myHomeroomClass.split('-');
+      selectedGrade = Number(parts[0]) || 1;
+      selectedClassNum = Number(parts[1]) || 8;
+      const sSel = document.getElementById('singleClassSelect');
+      const dSel = document.getElementById('dualClassSelect');
+      if (sSel) sSel.value = myHomeroomClass;
+      if (dSel) dSel.value = myHomeroomClass;
+      loadClassTimetable(selectedGrade, selectedClassNum);
+    }
+
+    function refreshComciganTimetable() {
+      const meta = document.getElementById('ttMetaDesc');
+      if (meta) meta.innerText = '컴시간알리미 최신 시간표를 동기화 중...';
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(() => {
+            loadTeacherTimetable(selectedTeacherName);
+            loadClassTimetable(selectedGrade, selectedClassNum);
+          })
+          .withFailureHandler(onTimetableError)
+          .api_refreshComciganData();
+      } else {
+        loadTeacherTimetable(selectedTeacherName);
+        loadClassTimetable(selectedGrade, selectedClassNum);
+      }
+    }
+
+    function onTimetableError(err) {
+      console.error('Timetable sync error:', err);
+      const meta = document.getElementById('ttMetaDesc');
+      if (meta) meta.innerText = '시간표 동기화 오류 (재시도 필요)';
+    }
+
+    // 6. 타임라인 렌더링 (교사)
+    function renderTeacherTimeline(data, targetId, isCompact) {
+      const el = document.getElementById(targetId);
+      if (!el || !data) return;
+
+      const periods = data.todayPeriods || [];
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+
+      let html = '';
+      periods.forEach(p => {
+        let isCurrent = false;
+        if (p.period === 1 && nowMin >= 520 && nowMin < 570) isCurrent = true;
+        if (p.period === 2 && nowMin >= 575 && nowMin < 625) isCurrent = true;
+        if (p.period === 3 && nowMin >= 630 && nowMin < 680) isCurrent = true;
+        if (p.period === 4 && nowMin >= 685 && nowMin < 735) isCurrent = true;
+        if (p.period === 5 && nowMin >= 790 && nowMin < 840) isCurrent = true;
+        if (p.period === 6 && nowMin >= 845 && nowMin < 895) isCurrent = true;
+        if (p.period === 7 && nowMin >= 900 && nowMin < 950) isCurrent = true;
+
+        const isEmpty = !p.classLabel || p.subject.includes('공강');
+        let cls = isEmpty ? 'period-block empty' : 'period-block';
+        if (isCurrent) cls += ' current';
+        if (p.isChanged) cls += ' substitute';
+
+        const subjectText = isEmpty ? '공강' : p.subject;
+        const targetText = isEmpty ? (isCompact ? '연구' : '교재연구') : `${p.classLabel}반`;
+
+        html += `
+          <div class="${cls}">
+            <span class="period-num">${p.period}교시${isCurrent ? ' (현)' : ''}</span>
+            <span class="period-subject">${subjectText}</span>
+            <span class="period-room">${targetText}</span>
+            ${p.isChanged ? `<span class="period-badge-sub">보강</span>` : ''}
+          </div>
+        `;
+      });
+      el.innerHTML = html;
+    }
+
+    // 7. 타임라인 렌더링 (학급)
+    function renderClassTimeline(data, targetId, isCompact) {
+      const el = document.getElementById(targetId);
+      if (!el || !data) return;
+
+      const periods = data.todayPeriods || [];
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+
+      if (periods.length === 0 || periods.every(p => !p.subject)) {
+        el.innerHTML = `<div style="grid-column: 1 / -1; padding: ${isCompact ? '12px 8px' : '20px 16px'}; text-align: center; color: var(--text-sub); font-size: ${isCompact ? '11.5px' : '13px'}; background: #f8fafc; border-radius: var(--radius-sm); border: 1px dashed var(--border);">
+          📅 오늘 일일 시간표 미편성 (수능 연계 재량휴업일 등)<br>
+          <button class="card-action-btn" onclick="openWeeklyModal()" style="margin-top: 6px; font-size:11px;">주간 전체 시간표</button>
+        </div>`;
+        return;
+      }
+
+      let html = '';
+      periods.forEach(p => {
+        let isCurrent = false;
+        if (p.period === 1 && nowMin >= 520 && nowMin < 570) isCurrent = true;
+        if (p.period === 2 && nowMin >= 575 && nowMin < 625) isCurrent = true;
+        if (p.period === 3 && nowMin >= 630 && nowMin < 680) isCurrent = true;
+        if (p.period === 4 && nowMin >= 685 && nowMin < 735) isCurrent = true;
+        if (p.period === 5 && nowMin >= 790 && nowMin < 840) isCurrent = true;
+        if (p.period === 6 && nowMin >= 845 && nowMin < 895) isCurrent = true;
+        if (p.period === 7 && nowMin >= 900 && nowMin < 950) isCurrent = true;
+
+        let cls = 'period-block';
+        if (isCurrent) cls += ' current';
+        if (p.isChanged) cls += ' substitute';
+
+        const subjectText = p.subject || '공강';
+        const teacherText = p.teacher ? (isCompact ? p.teacher : `${p.teacher}T`) : (p.room || '-');
+
+        html += `
+          <div class="${cls}">
+            <span class="period-num">${p.period}교시${isCurrent ? ' (현)' : ''}</span>
+            <span class="period-subject">${subjectText}</span>
+            <span class="period-room">${teacherText}</span>
+            ${p.isChanged ? `<span class="period-badge-sub">대강</span>` : ''}
+          </div>
+        `;
+      });
+      el.innerHTML = html;
+    }
+
+    // 8. 주간 시간표 전체 모달
+    function openWeeklyModal() {
+      const modal = document.getElementById('weeklyModal');
+      if (!modal) return;
+
+      // 현재 선택된 뷰에 따라 모달 기본 탭 결정
+      if (currentTimetableView === 'class') {
+        switchWeeklyModalTab('class');
+      } else {
+        switchWeeklyModalTab('teacher');
+      }
+      modal.style.display = 'flex';
+    }
+
+    function closeWeeklyModal() {
+      const modal = document.getElementById('weeklyModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function switchWeeklyModalTab(mode) {
+      currentWeeklyModalTab = mode;
+      const btnT = document.getElementById('btnWeeklyTeacher');
+      const btnC = document.getElementById('btnWeeklyClass');
+      const title = document.getElementById('weeklyModalTitle');
+      const body = document.getElementById('weeklyModalBody');
+      if (!body) return;
+
+      btnT.classList.toggle('active', mode === 'teacher');
+      btnC.classList.toggle('active', mode === 'class');
+
+      if (mode === 'teacher') {
+        if (title) title.innerText = `서울사대부중 ${selectedTeacherName} 선생님 주간 수업표`;
+        renderTeacherWeeklyTable(body);
+      } else {
+        if (title) title.innerText = `서울사대부중 ${selectedGrade}학년 ${selectedClassNum}반 주간 시간표`;
+        renderClassWeeklyTable(body);
+      }
+    }
+
+    function renderTeacherWeeklyTable(container) {
+      if (!currentTeacherData || !currentTeacherData.weeklySchedule) {
+        container.innerHTML = '<div class="skel">교사 주간 시간표를 불러오는 중...</div>';
+        return;
+      }
+      const schedule = currentTeacherData.weeklySchedule;
+      let html = `
+        <table style="width:100%; border-collapse:collapse; text-align:center; font-size:12.5px;">
+          <thead>
+            <tr style="background:#f1f5f9; border-bottom:2px solid var(--border);">
+              <th style="padding:10px 8px; border:1px solid var(--border); width:70px;">교시</th>
+              <th style="padding:10px 8px; border:1px solid var(--border);">월</th>
+              <th style="padding:10px 8px; border:1px solid var(--border);">화</th>
+              <th style="padding:10px 8px; border:1px solid var(--border);">수</th>
+              <th style="padding:10px 8px; border:1px solid var(--border);">목</th>
+              <th style="padding:10px 8px; border:1px solid var(--border);">금</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      for (let p = 1; p <= 7; p++) {
+        html += `<tr><td style="padding:8px 4px; font-weight:700; background:#f8fafc; border:1px solid var(--border);">${p}교시</td>`;
+        for (let d = 1; d <= 5; d++) {
+          const list = schedule[d] || [];
+          const item = list.find(x => x.period === p);
+          if (item) {
+            const bg = item.isChanged ? 'background:var(--accent-danger-bg);' : 'background:#f0fdf4;';
+            html += `<td style="padding:8px; border:1px solid var(--border); ${bg}">
+              <div style="font-weight:700; color:var(--text-main);">${item.subject}</div>
+              <div style="font-size:11px; color:#15803d; font-weight:600; margin-top:2px;">${item.classLabel}반</div>
+              ${item.isChanged ? '<span style="display:inline-block; font-size:9px; background:var(--accent-danger); color:#fff; padding:0 3px; border-radius:2px; font-weight:700; margin-top:2px;">보강</span>' : ''}
+            </td>`;
+          } else {
+            html += `<td style="padding:8px; border:1px solid var(--border); color:#94a3b8; font-size:11px;">공강</td>`;
+          }
+        }
+        html += `</tr>`;
+      }
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    }
+
+    function renderClassWeeklyTable(container) {
+      if (!currentClassData || !currentClassData.weeklySchedule) {
+        container.innerHTML = '<div class="skel">학급 주간 시간표를 불러오는 중...</div>';
+        return;
+      }
+      const schedule = currentClassData.weeklySchedule;
+      let html = `
+        <table style="width:100%; border-collapse:collapse; text-align:center; font-size:12.5px;">
+          <thead>
+            <tr style="background:#f1f5f9; border-bottom:2px solid var(--border);">
+              <th style="padding:10px 8px; border:1px solid var(--border); width:70px;">교시</th>
+              <th style="padding:10px 8px; border:1px solid var(--border);">월</th>
+              <th style="padding:10px 8px; border:1px solid var(--border);">화</th>
+              <th style="padding:10px 8px; border:1px solid var(--border);">수</th>
+              <th style="padding:10px 8px; border:1px solid var(--border);">목</th>
+              <th style="padding:10px 8px; border:1px solid var(--border);">금</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      for (let p = 1; p <= 7; p++) {
+        html += `<tr><td style="padding:8px 4px; font-weight:700; background:#f8fafc; border:1px solid var(--border);">${p}교시</td>`;
+        for (let d = 1; d <= 5; d++) {
+          const item = (schedule[d] && schedule[d][p - 1]) || {};
+          const isChanged = item.isChanged;
+          const bg = isChanged ? 'background:var(--accent-danger-bg);' : '';
+          const subject = item.subject || '-';
+          const teacher = item.teacher ? `<div style="font-size:11px; color:var(--text-sub); margin-top:2px;">${item.teacher}</div>` : '';
+          const badge = isChanged ? `<span style="display:inline-block; font-size:9.5px; background:var(--accent-danger); color:#fff; padding:0 4px; border-radius:2px; font-weight:700; margin-top:2px;">보강</span>` : '';
+          html += `<td style="padding:8px; border:1px solid var(--border); ${bg}">
+            <div style="font-weight:700; color:var(--text-main);">${subject}</div>
+            ${teacher}
+            ${badge}
+          </td>`;
+        }
+        html += `</tr>`;
+      }
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    }
+
+    // 9. 학사일정 캘린더 (노션 DB 실시간 연동)
+    function loadSchoolEvents() {
+      const ym = '202611';
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(renderCalendarEvents)
+          .withFailureHandler(err => console.warn('Events fetch failed:', err))
+          .api_getSchoolEventsList(ym);
+      } else {
+        fetch('/api/events?ym=' + ym)
+          .then(res => res.json())
+          .then(data => renderCalendarEvents(data))
+          .catch(err => console.warn('Local events fetch failed:', err));
+      }
+    }
+
+    function renderCalendarEvents(res) {
+      const strip = document.getElementById('calendarWeekStrip');
+      if (!strip || !res || !res.events) return;
+
+      const events = res.events;
+      const weekDates = [
+        { dow: '월', date: '2026-11-16', dayNum: '16' },
+        { dow: '화', date: '2026-11-17', dayNum: '17' },
+        { dow: '수', date: '2026-11-18', dayNum: '18' },
+        { dow: '목', date: '2026-11-19', dayNum: '19' },
+        { dow: '금', date: '2026-11-20', dayNum: '20' }
+      ];
+
+      const todayStr = '2026-11-20'; // 오늘 기준
+      let html = '';
+
+      weekDates.forEach(w => {
+        const isToday = (w.date === todayStr);
+        const dayEvs = events.filter(e => {
+          if (e.start === w.date) return true;
+          if (e.start <= w.date && e.end && e.end >= w.date) return true;
+          return false;
+        });
+
+        const evText = dayEvs.length > 0 ? dayEvs.map(e => e.name).join(' · ') : '일정 없음';
+        const evCls = dayEvs.some(e => e.holiday) ? 'style="color:#b91c1c; font-weight:700;"' : '';
+
+        html += `
+          <div class="schedule-day-cell ${isToday ? 'today' : ''}">
+            <div class="day-header">
+              <span>${w.dow}${isToday ? ' (오늘)' : ''}</span>
+              <span class="tabular">${w.dayNum}</span>
+            </div>
+            <div class="day-event" ${evCls}>${evText}</div>
+          </div>
+        `;
+      });
+
+      strip.innerHTML = html;
+    }
+
+    function openAllEventsModal() {
+      alert('2026학년도 사대부중 주요 학사일정은 관리자 콘솔 및 노션 DB에서 확인하실 수 있습니다.');
+    }
+
+    function getFallbackMeta() {
+      return {
+        teachers: [
+          { id: 1, name: '이현*' },
+          { id: 2, name: '송명*' },
+          { id: 3, name: '안수*' },
+          { id: 4, name: '이경*' },
+          { id: 5, name: '엄혜*' },
+          { id: 6, name: '이정*' },
+          { id: 7, name: '김영*' },
+          { id: 8, name: '김양*' },
+          { id: 9, name: '김진*' }
+        ],
+        classes: [
+          { grade: 1, classNum: 1 }, { grade: 1, classNum: 2 }, { grade: 1, classNum: 3 }, { grade: 1, classNum: 4 },
+          { grade: 1, classNum: 5 }, { grade: 1, classNum: 6 }, { grade: 1, classNum: 7 }, { grade: 1, classNum: 8 }
+        ],
+        homeroomMap: {
+          '1-1': '송명*', '1-2': '안수*', '1-3': '이경*', '1-4': '엄혜*',
+          '1-5': '이정*', '1-6': '김영*', '1-7': '김양*', '1-8': '이현*'
+        }
+      };
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadComciganMeta();
+      loadSchoolEvents();
+    });
   </script>
+
+  <!-- 주간 시간표 전체 모달 -->
+  <div id="weeklyModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.45); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#fff; border-radius:var(--radius-md); max-width:860px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1); border:1px solid var(--border);">
+      <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-top-left-radius:var(--radius-md); border-top-right-radius:var(--radius-md);">
+        <div>
+          <h3 id="weeklyModalTitle" style="font-size:16px; font-weight:700; color:var(--text-main); margin:0;">서울사대부중 주간 시간표</h3>
+          <p id="weeklyModalSub" style="font-size:12px; color:var(--text-sub); margin:2px 0 0 0;">컴시간알리미 실시간 주간 편성표</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="timetable-view-tabs" id="weeklyModalTabs">
+            <button class="tt-view-tab active" id="btnWeeklyTeacher" onclick="switchWeeklyModalTab('teacher')">교사 주간</button>
+            <button class="tt-view-tab" id="btnWeeklyClass" onclick="switchWeeklyModalTab('class')">학급 주간</button>
+          </div>
+          <button onclick="closeWeeklyModal()" style="border:none; background:none; font-size:20px; cursor:pointer; color:var(--text-sub); padding:4px 8px;">✕</button>
+        </div>
+      </div>
+      <div style="padding:20px;" id="weeklyModalBody">
+        <!-- 주간 시간표 테이블 -->
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
