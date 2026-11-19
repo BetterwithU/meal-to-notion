@@ -10,7 +10,7 @@
     "https://www.googleapis.com/auth/script.container.ui"
   ],
   "webapp": {
-    "access": "MYSELF",
+    "access": "ANYONE",
     "executeAs": "USER_DEPLOYING"
   }
 }
