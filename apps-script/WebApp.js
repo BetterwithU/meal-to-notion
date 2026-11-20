@@ -5,12 +5,94 @@
  * 토큰은 PropertiesService에만 두고 브라우저로 내려보내지 않는다.
  */
 
+// ===== 관리자 보안 검증 함수들 =====
+function getAdminEmails() {
+  var p = PropertiesService.getScriptProperties().getProperty('ADMIN_EMAILS');
+  if (!p) return [];
+  return p.split(',').map(function(s) { return s.trim().toLowerCase(); }).filter(Boolean);
+}
+
+function getAdminPin() {
+  return PropertiesService.getScriptProperties().getProperty('ADMIN_PIN') || '';
+}
+
+function getCurrentUserEmail() {
+  try {
+    return Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+function checkAdminAuth(clientPin) {
+  var adminEmails = getAdminEmails();
+  var configuredPin = getAdminPin();
+  var currentEmail = getCurrentUserEmail().toLowerCase();
+  
+  // 1. 아직 등록된 관리자가 없는 최초 설정 상태이면 설정 허용
+  if (adminEmails.length === 0 && !configuredPin) {
+    return { authorized: true, isInitialSetup: true, email: currentEmail };
+  }
+  
+  // 2. 구글 이메일 일치 검증
+  if (currentEmail && adminEmails.indexOf(currentEmail) !== -1) {
+    return { authorized: true, by: 'email', email: currentEmail };
+  }
+  
+  // 3. 비상 PIN 번호 일치 검증
+  if (configuredPin && clientPin && String(clientPin).trim() === configuredPin.trim()) {
+    return { authorized: true, by: 'pin', email: currentEmail };
+  }
+  
+  return { authorized: false, email: currentEmail, hasAdmins: true };
+}
+
+// 클라이언트 RPC: 보안 설정 저장
+function saveAdminSecurityConfig(emails, pin) {
+  var currentAuth = checkAdminAuth(pin);
+  if (!currentAuth.authorized && !currentAuth.isInitialSetup) {
+    throw new Error('보안 설정을 변경할 관리자 권한이 없습니다.');
+  }
+  
+  var cleanEmails = String(emails || '').split(',').map(function(s) { return s.trim().toLowerCase(); }).filter(Boolean).join(',');
+  var cleanPin = String(pin || '').trim();
+  
+  PropertiesService.getScriptProperties().setProperties({
+    'ADMIN_EMAILS': cleanEmails,
+    'ADMIN_PIN': cleanPin
+  });
+  
+  return { ok: true, adminCount: cleanEmails ? cleanEmails.split(',').length : 0, hasPin: !!cleanPin };
+}
+
+// 클라이언트 RPC: 현재 보안 상태 및 사용자 이메일 확인
+function getAdminSecurityStatus(pin) {
+  var auth = checkAdminAuth(pin);
+  var adminEmails = getAdminEmails();
+  return {
+    isAuthorized: auth.authorized,
+    isInitialSetup: !!auth.isInitialSetup,
+    currentUserEmail: getCurrentUserEmail(),
+    adminEmails: (auth.authorized || auth.isInitialSetup) ? adminEmails.join(', ') : '',
+    hasPin: !!getAdminPin()
+  };
+}
+
+// 클라이언트 RPC: PIN 번호로 관리자 검증
+function verifyAdminPin(pin) {
+  return checkAdminAuth(pin);
+}
+
 // ===== 진입점 =====
 function doGet(e) {
   var view = (e && e.parameter && e.parameter.view) ? e.parameter.view.toLowerCase() : 'portal';
+  var pin = (e && e.parameter && e.parameter.pin) ? e.parameter.pin : '';
+  
   if (view === 'admin') {
-    return HtmlService.createTemplateFromFile('Admin')
-      .evaluate()
+    var auth = checkAdminAuth(pin);
+    var tmpl = HtmlService.createTemplateFromFile('Admin');
+    tmpl.authStatus = JSON.stringify(auth);
+    return tmpl.evaluate()
       .setTitle('서울사대부중 통합 업무 관리자 콘솔')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
